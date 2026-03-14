@@ -77,6 +77,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.chanmi.app.DevicePosture
+import com.chanmi.app.LocalDevicePosture
 import com.chanmi.app.data.model.ChurchCluster
 import com.chanmi.app.data.model.ChurchItem
 import com.chanmi.app.location.LocationManager
@@ -165,6 +167,41 @@ fun NearbyChurchScreen(
                         context.startActivity(intent)
                     }
                 )
+            } else if (LocalDevicePosture.current == DevicePosture.HALF_OPENED_HORIZONTAL) {
+                // 갤럭시 플립 플렉스 모드: 상단 지도 + 하단 목록
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        MapContent(
+                            clusters = clusters,
+                            userLocation = userLocation,
+                            showSearchButton = showSearchButton,
+                            isLoading = isLoading,
+                            onMarkerClick = { viewModel.selectChurch(it) },
+                            onClusterClick = { viewModel.zoomToCluster(it) },
+                            onCameraMove = { center, distance ->
+                                viewModel.updateMapCenter(center)
+                                viewModel.updateClusters(distance)
+                                viewModel.checkIfMapMovedSignificantly()
+                                userLocation?.let { viewModel.checkIfReturnedToUserLocation(it) }
+                            },
+                            onSearchThisArea = { viewModel.searchChurchesInCurrentArea() },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    HorizontalDivider()
+                    ChurchSideList(
+                        churches = churches,
+                        isLoading = isLoading,
+                        onChurchClick = { it.openInMaps(context) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    )
+                }
             } else if (widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium) {
                 // 태블릿/폴드 펼침: 지도 | 사이드 리스트
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -319,6 +356,19 @@ private fun PermissionView(
             modifier = Modifier.semantics { contentDescription = "위치 권한 허용하기" }
         ) {
             Text("위치 권한 허용")
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(
+            onClick = onOpenSettings,
+            modifier = Modifier.semantics { contentDescription = "설정에서 직접 권한 허용하기" }
+        ) {
+            Icon(
+                Icons.Default.LocationOff,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("설정에서 직접 허용하기")
         }
     }
 }

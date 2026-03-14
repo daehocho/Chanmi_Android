@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.chanmi.app.data.model.MysteryType
-import com.chanmi.app.ui.theme.ChanmiTheme
+import com.chanmi.app.ui.theme.chanmiColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +74,7 @@ fun RosaryCompletionScreen(
             Icon(
                 Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = ChanmiTheme.colors.goldAccent,
+                tint = MaterialTheme.chanmiColors.goldAccent,
                 modifier = Modifier.size(80.dp)
             )
 

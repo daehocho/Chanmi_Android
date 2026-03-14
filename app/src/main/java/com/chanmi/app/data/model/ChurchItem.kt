@@ -1,8 +1,10 @@
 package com.chanmi.app.data.model
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -44,7 +46,11 @@ data class ChurchItem(
     fun openInMaps(context: Context) {
         val uri = Uri.parse("geo:${latitude},${longitude}?q=${Uri.encode(name)}")
         val intent = Intent(Intent.ACTION_VIEW, uri)
-        context.startActivity(intent)
+        try {
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "지도 앱을 찾을 수 없습니다", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 

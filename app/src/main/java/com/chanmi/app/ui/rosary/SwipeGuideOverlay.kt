@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +31,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun SwipeGuideOverlay(onDismiss: () -> Unit) {
@@ -48,7 +48,7 @@ fun SwipeGuideOverlay(onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
@@ -73,7 +73,7 @@ fun SwipeGuideOverlay(onDismiss: () -> Unit) {
             Text(
                 "아래로 쓸어내려\n다음 기도로 넘어가세요",
                 color = Color.White,
-                fontSize = 20.sp,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
             )
@@ -83,7 +83,7 @@ fun SwipeGuideOverlay(onDismiss: () -> Unit) {
             Text(
                 "탭하여 닫기",
                 color = Color.White.copy(alpha = 0.7f),
-                fontSize = 12.sp
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

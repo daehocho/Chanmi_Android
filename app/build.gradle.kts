@@ -93,6 +93,9 @@ dependencies {
     implementation(libs.core.ktx)
     implementation(libs.activity.compose)
 
+    // Window Manager (폴더블 디바이스)
+    implementation(libs.window)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))

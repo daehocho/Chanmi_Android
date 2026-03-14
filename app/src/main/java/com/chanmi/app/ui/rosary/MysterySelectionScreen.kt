@@ -60,8 +60,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import android.provider.Settings
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -74,7 +76,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.chanmi.app.data.model.DecadeStep
 import com.chanmi.app.data.model.MysteryType
 import com.chanmi.app.data.model.RosaryPhase
-import com.chanmi.app.ui.theme.ChanmiTheme
+import com.chanmi.app.DevicePosture
+import com.chanmi.app.LocalDevicePosture
+import com.chanmi.app.ui.theme.chanmiColors
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -89,7 +93,6 @@ fun MysterySelectionScreen(
     val selectedMystery by viewModel.selectedMystery.collectAsStateWithLifecycle()
     val isPraying by viewModel.isPraying.collectAsStateWithLifecycle()
     val numberOfDecades by viewModel.numberOfDecades.collectAsStateWithLifecycle()
-    val elapsedSeconds by viewModel.elapsedSeconds.collectAsStateWithLifecycle()
     val preferredHand by viewModel.preferredHand.collectAsStateWithLifecycle()
     val hasSeenSwipeGuide by viewModel.hasSeenSwipeGuide.collectAsStateWithLifecycle()
 
@@ -195,50 +198,120 @@ private fun PrayingLayout(
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
 ) {
     val haptic = LocalHapticFeedback.current
+    val currentDecade by viewModel.currentDecade.collectAsStateWithLifecycle()
+    val phaseTitle by viewModel.currentPhaseTitle.collectAsStateWithLifecycle()
+    val prayerText by viewModel.currentPrayerText.collectAsStateWithLifecycle()
+    val meditationTopic by viewModel.currentMeditationTopic.collectAsStateWithLifecycle()
+    val progressPercent by viewModel.progressPercent.collectAsStateWithLifecycle()
+    val formattedTime by viewModel.formattedTime.collectAsStateWithLifecycle()
+    val devicePosture = LocalDevicePosture.current
+    val isFlexMode = devicePosture == DevicePosture.HALF_OPENED_HORIZONTAL
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 8.dp, bottom = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        RosaryBeadCircle(
-            isPraying = true,
-            currentPhase = currentPhase,
-            selectedMystery = selectedMystery,
-            currentDecade = viewModel.currentDecade,
-            onTap = {},
-            widthSizeClass = widthSizeClass
-        )
-
-        // Swipe area
-        if (currentPhase !is RosaryPhase.ClosingPrayer && currentPhase !is RosaryPhase.Completed) {
-            SwipeArea(
-                preferredHand = preferredHand,
-                onAdvance = {
-                    viewModel.debouncedAdvance()
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    if (isFlexMode) {
+        // 갤럭시 플립 플렉스 모드: 상단에 비드, 하단에 스와이프+기도문
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 4.dp, bottom = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 상단 절반: 비드 원 + 진행률
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    RosaryBeadCircle(
+                        isPraying = true,
+                        currentPhase = currentPhase,
+                        selectedMystery = selectedMystery,
+                        currentDecade = currentDecade,
+                        onTap = {},
+                        widthSizeClass = widthSizeClass
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ProgressTimerSection(
+                        progressPercent = progressPercent,
+                        formattedTime = formattedTime,
+                    )
                 }
-            )
-        } else {
-            Spacer(modifier = Modifier.height(80.dp))
+            }
+            // 하단 절반: 스와이프 + 기도문
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (currentPhase !is RosaryPhase.ClosingPrayer && currentPhase !is RosaryPhase.Completed) {
+                    SwipeArea(
+                        preferredHand = preferredHand,
+                        onAdvance = {
+                            viewModel.debouncedAdvance()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
+                PrayerTextCard(
+                    isPraying = true,
+                    phaseTitle = phaseTitle,
+                    prayerText = prayerText,
+                    meditationTopic = meditationTopic,
+                    isExpanded = isPrayerTextExpanded,
+                    onToggle = onTogglePrayerText,
+                )
+            }
         }
+    } else {
+        // 일반 모드
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 8.dp, bottom = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            RosaryBeadCircle(
+                isPraying = true,
+                currentPhase = currentPhase,
+                selectedMystery = selectedMystery,
+                currentDecade = currentDecade,
+                onTap = {},
+                widthSizeClass = widthSizeClass
+            )
 
-        PrayerTextCard(
-            isPraying = true,
-            phaseTitle = viewModel.currentPhaseTitle,
-            prayerText = viewModel.currentPrayerText,
-            meditationTopic = viewModel.currentMeditationTopic,
-            isExpanded = isPrayerTextExpanded,
-            onToggle = onTogglePrayerText,
-        )
+            // Swipe area
+            if (currentPhase !is RosaryPhase.ClosingPrayer && currentPhase !is RosaryPhase.Completed) {
+                SwipeArea(
+                    preferredHand = preferredHand,
+                    onAdvance = {
+                        viewModel.debouncedAdvance()
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                )
+            } else {
+                Spacer(modifier = Modifier.height(80.dp))
+            }
 
-        Spacer(modifier = Modifier.weight(1f))
+            PrayerTextCard(
+                isPraying = true,
+                phaseTitle = phaseTitle,
+                prayerText = prayerText,
+                meditationTopic = meditationTopic,
+                isExpanded = isPrayerTextExpanded,
+                onToggle = onTogglePrayerText,
+            )
 
-        ProgressTimerSection(
-            progressPercent = viewModel.progressPercent,
-            formattedTime = viewModel.formattedTime,
-        )
+            Spacer(modifier = Modifier.weight(1f))
+
+            ProgressTimerSection(
+                progressPercent = progressPercent,
+                formattedTime = formattedTime,
+            )
+        }
     }
 }
 
@@ -249,6 +322,9 @@ private fun NotPrayingLayout(
     numberOfDecades: Int,
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
 ) {
+    val progressPercent by viewModel.progressPercent.collectAsStateWithLifecycle()
+    val formattedTime by viewModel.formattedTime.collectAsStateWithLifecycle()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -286,8 +362,8 @@ private fun NotPrayingLayout(
         )
 
         ProgressTimerSection(
-            progressPercent = viewModel.progressPercent,
-            formattedTime = viewModel.formattedTime,
+            progressPercent = progressPercent,
+            formattedTime = formattedTime,
         )
     }
 }
@@ -355,15 +431,18 @@ private fun RosaryBeadCircle(
         isPraying -> 220.dp
         else -> 260.dp
     }
-    val goldAccent = ChanmiTheme.colors.goldAccent
+    val goldAccent = MaterialTheme.chanmiColors.goldAccent
     val primary = MaterialTheme.colorScheme.primary
+
+    // 접근성: 모션 감소 설정 확인
+    val reduceMotion = LocalReduceMotion.current
 
     // Animate bead radii for smooth state transitions
     val beadScales = (0 until 10).map { i ->
         val state = beadStateFor(i, isPraying, currentPhase)
         animateFloatAsState(
             targetValue = if (state == BeadState.CURRENT) 1.2f else 1.0f,
-            animationSpec = tween(durationMillis = 300),
+            animationSpec = if (reduceMotion) tween(durationMillis = 0) else tween(durationMillis = 300),
             label = "bead_scale_$i"
         )
     }
@@ -737,3 +816,18 @@ private fun mysteryShortName(mystery: MysteryType): String = when (mystery) {
     MysteryType.GLORIOUS -> "영광"
     MysteryType.LUMINOUS -> "빛"
 }
+
+// ===== 접근성: 모션 감소 설정 =====
+
+private val LocalReduceMotion: Boolean
+    @Composable
+    get() {
+        val context = LocalContext.current
+        return remember {
+            Settings.Global.getFloat(
+                context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            ) == 0f
+        }
+    }

@@ -255,6 +255,7 @@ private fun CalendarGridView(
         }
 
         // 날짜 그리드
+        val today = remember { LocalDate.now() }
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
             modifier = Modifier
@@ -263,11 +264,11 @@ private fun CalendarGridView(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             userScrollEnabled = false
         ) {
-            items(days) { date ->
+            items(days, key = { it?.toString() ?: "blank_${days.indexOf(it)}" }) { date ->
                 if (date != null) {
                     DayCellView(
                         date = date,
-                        isToday = date == LocalDate.now(),
+                        isToday = date == today,
                         isSelected = date == selectedDate,
                         record = dailyRecords[date],
                         onClick = { onDateSelected(date) }

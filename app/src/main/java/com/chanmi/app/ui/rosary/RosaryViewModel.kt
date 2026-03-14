@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -62,26 +63,21 @@ class RosaryViewModel @Inject constructor(
     private var lastAdvanceTime = 0L
     private val advanceDebounceMs = 300L
 
-    // ===== Computed Properties =====
+    // ===== Reactive Computed Properties (StateFlow) =====
 
-    val formattedTime: String
-        get() {
-            val s = _elapsedSeconds.value
-            return String.format("%02d:%02d", s / 60, s % 60)
-        }
+    val formattedTime: StateFlow<String> = _elapsedSeconds.map { s ->
+        String.format("%02d:%02d", s / 60, s % 60)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "00:00")
 
-    val progress: Double
-        get() {
-            val total = totalSteps
-            if (total <= 0) return 0.0
-            return currentStepIndex.toDouble() / total.toDouble()
-        }
+    val progressPercent: StateFlow<String> = combine(_currentPhase, _numberOfDecades) { phase, decades ->
+        val total = 9 + 14 * decades
+        if (total <= 0) return@combine "0%"
+        val stepIndex = computeStepIndex(phase, decades)
+        "${(stepIndex.toDouble() / total.toDouble() * 100).toInt()}%"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "0%")
 
-    val progressPercent: String
-        get() = "${(progress * 100).toInt()}%"
-
-    val currentPrayerText: String
-        get() = when (val phase = _currentPhase.value) {
+    val currentPrayerText: StateFlow<String> = combine(_currentPhase, _selectedMystery) { phase, mystery ->
+        when (phase) {
             is RosaryPhase.MysterySelection -> ""
             is RosaryPhase.SignOfCross -> "성부와 성자와 성령의 이름으로. 아멘."
             is RosaryPhase.ApostlesCreed -> "전능하신 천주 성부, 천지의 창조주를 저는 믿나이다. 그 외아들 우리 주 예수 그리스도님, " +
@@ -94,7 +90,7 @@ class RosaryViewModel @Inject constructor(
             is RosaryPhase.OpeningHailMary -> hailMaryText
             is RosaryPhase.OpeningGlory -> gloryBeText
             is RosaryPhase.Decade -> when (phase.step) {
-                is DecadeStep.Meditation -> "제${phase.number}단: ${_selectedMystery.value.meditations[phase.number - 1]}"
+                is DecadeStep.Meditation -> "제${phase.number}단: ${mystery.meditations[phase.number - 1]}"
                 is DecadeStep.OurFather -> ourFatherText
                 is DecadeStep.HailMary -> hailMaryText
                 is DecadeStep.Glory -> gloryBeText
@@ -104,9 +100,10 @@ class RosaryViewModel @Inject constructor(
             is RosaryPhase.ClosingPrayer -> "성부와 성자와 성령의 이름으로. 아멘."
             is RosaryPhase.Completed -> ""
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    val currentPhaseTitle: String
-        get() = when (val phase = _currentPhase.value) {
+    val currentPhaseTitle: StateFlow<String> = _currentPhase.map { phase ->
+        when (phase) {
             is RosaryPhase.MysterySelection -> ""
             is RosaryPhase.SignOfCross -> "성호경"
             is RosaryPhase.ApostlesCreed -> "사도신경"
@@ -127,46 +124,39 @@ class RosaryViewModel @Inject constructor(
             is RosaryPhase.ClosingPrayer -> "마침 기도"
             is RosaryPhase.Completed -> "완료"
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    val currentMeditationTopic: String?
-        get() {
-            val phase = _currentPhase.value
-            return if (phase is RosaryPhase.Decade) {
-                _selectedMystery.value.meditations[phase.number - 1]
-            } else null
-        }
+    val currentMeditationTopic: StateFlow<String?> = combine(_currentPhase, _selectedMystery) { phase, mystery ->
+        if (phase is RosaryPhase.Decade) {
+            mystery.meditations[phase.number - 1]
+        } else null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val currentDecade: Int?
-        get() {
-            val phase = _currentPhase.value
-            return if (phase is RosaryPhase.Decade) phase.number else null
-        }
+    val currentDecade: StateFlow<Int?> = _currentPhase.map { phase ->
+        if (phase is RosaryPhase.Decade) phase.number else null
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private val totalSteps: Int
-        get() = 9 + 14 * _numberOfDecades.value
-
-    private val currentStepIndex: Int
-        get() = when (val phase = _currentPhase.value) {
-            is RosaryPhase.MysterySelection -> 0
-            is RosaryPhase.SignOfCross -> 1
-            is RosaryPhase.ApostlesCreed -> 2
-            is RosaryPhase.OpeningOurFather -> 3
-            is RosaryPhase.OpeningHailMary -> 3 + phase.count
-            is RosaryPhase.OpeningGlory -> 7
-            is RosaryPhase.Decade -> {
-                val base = 8 + (phase.number - 1) * 14
-                when (phase.step) {
-                    is DecadeStep.Meditation -> base
-                    is DecadeStep.OurFather -> base + 1
-                    is DecadeStep.HailMary -> base + 1 + phase.step.count
-                    is DecadeStep.Glory -> base + 12
-                    is DecadeStep.Fatima -> base + 13
-                }
+    private fun computeStepIndex(phase: RosaryPhase, decades: Int): Int = when (phase) {
+        is RosaryPhase.MysterySelection -> 0
+        is RosaryPhase.SignOfCross -> 1
+        is RosaryPhase.ApostlesCreed -> 2
+        is RosaryPhase.OpeningOurFather -> 3
+        is RosaryPhase.OpeningHailMary -> 3 + phase.count
+        is RosaryPhase.OpeningGlory -> 7
+        is RosaryPhase.Decade -> {
+            val base = 8 + (phase.number - 1) * 14
+            when (phase.step) {
+                is DecadeStep.Meditation -> base
+                is DecadeStep.OurFather -> base + 1
+                is DecadeStep.HailMary -> base + 1 + phase.step.count
+                is DecadeStep.Glory -> base + 12
+                is DecadeStep.Fatima -> base + 13
             }
-            is RosaryPhase.SalveRegina -> 8 + _numberOfDecades.value * 14
-            is RosaryPhase.ClosingPrayer -> 8 + _numberOfDecades.value * 14 + 1
-            is RosaryPhase.Completed -> totalSteps
         }
+        is RosaryPhase.SalveRegina -> 8 + decades * 14
+        is RosaryPhase.ClosingPrayer -> 8 + decades * 14 + 1
+        is RosaryPhase.Completed -> 9 + 14 * decades
+    }
 
     // ===== Actions =====
 
@@ -256,6 +246,12 @@ class RosaryViewModel @Inject constructor(
         viewModelScope.launch {
             calendarRepository.addRosaryEntry(LocalDate.now(), _selectedMystery.value.key)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        timerJob?.cancel()
+        timerJob = null
     }
 
     private fun startTimer() {

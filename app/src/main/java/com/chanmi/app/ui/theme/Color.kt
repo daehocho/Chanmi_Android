@@ -18,7 +18,7 @@ val CardBackgroundDark = Color(0xFF2C2C2C)  // RGB(44, 44, 44)
 
 // GoldAccent - 성당 마커, 묵주 구슬, 기도문 카테고리 아이콘
 val GoldAccentLight = Color(0xFFB8A472)    // RGB(184, 164, 114)
-val GoldAccentDark = Color(0xFFCCB580)     // RGB(204, 181, 128)
+val GoldAccentDark = Color(0xFFCCBBAA)     // RGB(204, 187, 170) - iOS 일치
 
 // ===== 시맨틱 컬러 (iOS 시스템 색상 대응) =====
 

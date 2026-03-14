@@ -46,11 +46,16 @@ class NearbyChurchViewModel @Inject constructor(
 
     private var lastSearchedCenter: LatLng? = null
     private var clusterRadiusKm: Double = -1.0
+    private var cachedAllChurches: List<ChurchItem>? = null
+
+    private suspend fun getAllChurches(): List<ChurchItem> {
+        return cachedAllChurches ?: repository.loadChurches().also { cachedAllChurches = it }
+    }
 
     fun searchNearbyChurches(coordinate: LatLng) {
         viewModelScope.launch {
             _isLoading.value = true
-            val allChurches = repository.loadChurches()
+            val allChurches = getAllChurches()
             val radiusMeters = 10_000.0
 
             _churches.value = allChurches.mapNotNull { church ->
@@ -116,7 +121,7 @@ class NearbyChurchViewModel @Inject constructor(
         val center = currentMapCenter ?: return
         viewModelScope.launch {
             _isLoading.value = true
-            val allChurches = repository.loadChurches()
+            val allChurches = getAllChurches()
             val radiusMeters = 10_000.0
 
             _churches.value = allChurches.mapNotNull { church ->

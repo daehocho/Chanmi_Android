@@ -19,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -113,7 +114,7 @@ fun PrayerDetailScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
                     .fillMaxWidth()
-                    .semantics { contentDescription = prayer.content }
+                    .semantics { contentDescription = "${prayer.title} 기도문" }
             )
         } else {
             Box(
