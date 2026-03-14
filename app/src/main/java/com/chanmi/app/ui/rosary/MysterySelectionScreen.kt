@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -130,9 +132,13 @@ fun MysterySelectionScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("묵주기도") },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 actions = {
                     if (isPraying) {
                         if (currentPhase is RosaryPhase.ClosingPrayer) {
@@ -238,6 +244,8 @@ private fun PrayingLayout(
                     )
                 }
             }
+            // 힌지 영역 여백
+            Spacer(modifier = Modifier.height(8.dp))
             // 하단 절반: 스와이프 + 기도문
             Column(
                 modifier = Modifier
@@ -435,7 +443,7 @@ private fun RosaryBeadCircle(
     val primary = MaterialTheme.colorScheme.primary
 
     // 접근성: 모션 감소 설정 확인
-    val reduceMotion = LocalReduceMotion.current
+    val reduceMotion = LocalReduceMotion
 
     // Animate bead radii for smooth state transitions
     val beadScales = (0 until 10).map { i ->
@@ -463,9 +471,9 @@ private fun RosaryBeadCircle(
         androidx.compose.foundation.Canvas(
             modifier = Modifier.size(beadSize)
         ) {
-            // Draw circle track
+            // Draw circle track (iOS systemGray4 matching)
             drawCircle(
-                color = Color.Gray.copy(alpha = 0.3f),
+                color = Color(0xFFC7C7CC),
                 radius = size.minDimension / 2,
                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
             )
@@ -729,6 +737,10 @@ private fun DecadeSelector(
                         .background(
                             if (isSelected) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.surface
+                        )
+                        .then(
+                            if (!isSelected) Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                            else Modifier
                         )
                         .clickable { onSelect(decade) }
                         .semantics { contentDescription = "${decade}단" },

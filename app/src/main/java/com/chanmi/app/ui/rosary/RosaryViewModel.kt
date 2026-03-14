@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chanmi.app.data.model.DecadeStep
@@ -27,6 +28,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RosaryViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val dataStore: DataStore<Preferences>,
     private val calendarRepository: CalendarRepository
 ) : ViewModel() {
@@ -34,21 +36,33 @@ class RosaryViewModel @Inject constructor(
     companion object {
         private val PREFERRED_HAND_KEY = stringPreferencesKey("preferredHand")
         private val HAS_SEEN_SWIPE_GUIDE_KEY = booleanPreferencesKey("hasSeenSwipeGuide")
+        private const val KEY_IS_PRAYING = "isPraying"
+        private const val KEY_SELECTED_MYSTERY = "selectedMystery"
+        private const val KEY_NUMBER_OF_DECADES = "numberOfDecades"
+        private const val KEY_ELAPSED_SECONDS = "elapsedSeconds"
     }
 
     private val _currentPhase = MutableStateFlow<RosaryPhase>(RosaryPhase.MysterySelection)
     val currentPhase: StateFlow<RosaryPhase> = _currentPhase.asStateFlow()
 
-    private val _selectedMystery = MutableStateFlow(MysteryType.recommendedForToday())
+    private val _selectedMystery = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_SELECTED_MYSTERY)?.let {
+            try { MysteryType.valueOf(it) } catch (_: Exception) { null }
+        } ?: MysteryType.recommendedForToday()
+    )
     val selectedMystery: StateFlow<MysteryType> = _selectedMystery.asStateFlow()
 
-    private val _numberOfDecades = MutableStateFlow(5)
+    private val _numberOfDecades = MutableStateFlow(
+        savedStateHandle.get<Int>(KEY_NUMBER_OF_DECADES) ?: 5
+    )
     val numberOfDecades: StateFlow<Int> = _numberOfDecades.asStateFlow()
 
     private val _isPraying = MutableStateFlow(false)
     val isPraying: StateFlow<Boolean> = _isPraying.asStateFlow()
 
-    private val _elapsedSeconds = MutableStateFlow(0)
+    private val _elapsedSeconds = MutableStateFlow(
+        savedStateHandle.get<Int>(KEY_ELAPSED_SECONDS) ?: 0
+    )
     val elapsedSeconds: StateFlow<Int> = _elapsedSeconds.asStateFlow()
 
     val preferredHand: StateFlow<String> = dataStore.data
@@ -162,16 +176,20 @@ class RosaryViewModel @Inject constructor(
 
     fun selectMystery(mystery: MysteryType) {
         _selectedMystery.value = mystery
+        savedStateHandle[KEY_SELECTED_MYSTERY] = mystery.name
     }
 
     fun setNumberOfDecades(count: Int) {
         _numberOfDecades.value = count
+        savedStateHandle[KEY_NUMBER_OF_DECADES] = count
     }
 
     fun startPraying() {
         _isPraying.value = true
         _currentPhase.value = RosaryPhase.SignOfCross
         _elapsedSeconds.value = 0
+        savedStateHandle[KEY_IS_PRAYING] = true
+        savedStateHandle[KEY_ELAPSED_SECONDS] = 0
         startTimer()
     }
 
@@ -179,6 +197,7 @@ class RosaryViewModel @Inject constructor(
         timerJob?.cancel()
         timerJob = null
         _isPraying.value = false
+        savedStateHandle[KEY_IS_PRAYING] = false
     }
 
     fun debouncedAdvance() {
@@ -228,6 +247,10 @@ class RosaryViewModel @Inject constructor(
         _currentPhase.value = RosaryPhase.MysterySelection
         _selectedMystery.value = MysteryType.recommendedForToday()
         _numberOfDecades.value = 5
+        savedStateHandle[KEY_IS_PRAYING] = false
+        savedStateHandle[KEY_ELAPSED_SECONDS] = 0
+        savedStateHandle[KEY_NUMBER_OF_DECADES] = 5
+        savedStateHandle[KEY_SELECTED_MYSTERY] = MysteryType.recommendedForToday().name
     }
 
     fun setPreferredHand(hand: String) {
@@ -260,6 +283,7 @@ class RosaryViewModel @Inject constructor(
             while (true) {
                 delay(1000)
                 _elapsedSeconds.value += 1
+                savedStateHandle[KEY_ELAPSED_SECONDS] = _elapsedSeconds.value
             }
         }
     }

@@ -192,7 +192,8 @@ fun NearbyChurchScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                    HorizontalDivider()
+                    // 힌지 영역 여백
+                    Spacer(modifier = Modifier.height(8.dp))
                     ChurchSideList(
                         churches = churches,
                         isLoading = isLoading,

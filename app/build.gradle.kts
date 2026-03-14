@@ -19,6 +19,10 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Google Maps API 키 (local.properties에서 읽거나 빈 문자열 사용)
+        val mapsApiKey = project.findProperty("MAPS_API_KEY")?.toString() ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     buildTypes {
@@ -57,7 +61,7 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material3.window.size.class)
+    implementation(libs.compose.material3.windowSizeClass)
     implementation(libs.compose.material.icons.extended)
     debugImplementation(libs.compose.ui.tooling)
 

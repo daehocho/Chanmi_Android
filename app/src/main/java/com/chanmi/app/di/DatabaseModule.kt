@@ -35,7 +35,6 @@ object DatabaseModule {
             "chanmi_database"
         )
             .addMigrations(MIGRATION_1_2)
-            .fallbackToDestructiveMigration()
             .build()
     }
 

@@ -18,3 +18,8 @@
 # Room
 -keep class * extends androidx.room.RoomDatabase
 -keep @androidx.room.Entity class *
+
+# Google Play Services / Maps
+-keep class com.google.android.gms.maps.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-dontwarn com.google.android.gms.**

@@ -6,11 +6,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import com.chanmi.app.location.LocationManager
@@ -67,7 +70,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)
             val devicePosture = devicePostureFlow
-                .collectAsState(initial = DevicePosture.NORMAL)
+                .collectAsStateWithLifecycle(initialValue = DevicePosture.NORMAL)
 
             ChanmiTheme {
                 CompositionLocalProvider(LocalDevicePosture provides devicePosture.value) {
@@ -82,6 +85,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        // 앱 재시작 시 이미 부여된 위치 권한 상태를 복원
+        val hasLocationPermission = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasLocationPermission) {
+            locationManager.updatePermissionStatus(true)
+        }
         locationManager.startLocationUpdates()
     }
 
