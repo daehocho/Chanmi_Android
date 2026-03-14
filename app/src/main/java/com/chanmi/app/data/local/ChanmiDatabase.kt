@@ -8,8 +8,8 @@ import com.chanmi.app.data.model.RosaryEntry
 
 @Database(
     entities = [DailyRecord::class, RosaryEntry::class, GoodDeed::class],
-    version = 1,
-    exportSchema = false
+    version = 2,
+    exportSchema = true
 )
 abstract class ChanmiDatabase : RoomDatabase() {
     abstract fun dailyRecordDao(): DailyRecordDao

@@ -6,6 +6,8 @@ import com.chanmi.app.data.model.PrayerCategory
 import com.chanmi.app.data.model.PrayerData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -15,20 +17,23 @@ class PrayerRepository @Inject constructor(
 ) {
     private var cachedCategories: List<PrayerCategory>? = null
     private val json = Json { ignoreUnknownKeys = true }
+    private val mutex = Mutex()
 
-    suspend fun fetchCategories(): List<PrayerCategory> = withContext(Dispatchers.IO) {
-        cachedCategories?.let { return@withContext it }
-        val jsonString = context.assets.open("prayers.json")
-            .bufferedReader().use { it.readText() }
-        val data = json.decodeFromString<PrayerData>(jsonString)
-        cachedCategories = data.categories
-        data.categories
+    suspend fun fetchCategories(): List<PrayerCategory> = mutex.withLock {
+        cachedCategories?.let { return@withLock it }
+        withContext(Dispatchers.IO) {
+            val jsonString = context.assets.open("prayers.json")
+                .bufferedReader().use { it.readText() }
+            val data = json.decodeFromString<PrayerData>(jsonString)
+            cachedCategories = data.categories
+            data.categories
+        }
     }
 
-    suspend fun searchPrayers(query: String): List<Prayer> = withContext(Dispatchers.IO) {
+    suspend fun searchPrayers(query: String): List<Prayer> {
         val categories = fetchCategories()
         val lowerQuery = query.lowercase()
-        categories.flatMap { it.prayers }
+        return categories.flatMap { it.prayers }
             .filter {
                 it.title.lowercase().contains(lowerQuery) ||
                         it.content.lowercase().contains(lowerQuery)

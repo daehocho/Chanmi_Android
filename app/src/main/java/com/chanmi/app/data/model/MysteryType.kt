@@ -85,7 +85,7 @@ enum class MysteryType(val key: String) {
         }
 
         fun fromKey(key: String): MysteryType {
-            return entries.first { it.key == key }
+            return entries.firstOrNull { it.key == key } ?: JOYFUL
         }
     }
 }

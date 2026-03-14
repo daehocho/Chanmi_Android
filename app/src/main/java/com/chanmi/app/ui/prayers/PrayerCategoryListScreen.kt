@@ -32,7 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chanmi.app.data.model.Prayer
@@ -52,13 +53,14 @@ import com.chanmi.app.ui.theme.chanmiColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrayerCategoryListScreen(
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     onNavigateToList: (categoryId: String, categoryName: String) -> Unit,
     onNavigateToDetail: (prayerId: String) -> Unit,
     viewModel: PrayersViewModel = hiltViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val searchResults by viewModel.searchResults.collectAsState()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     var searchActive by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(

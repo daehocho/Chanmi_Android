@@ -44,6 +44,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,10 +58,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,6 +81,7 @@ import com.chanmi.app.data.model.ChurchCluster
 import com.chanmi.app.data.model.ChurchItem
 import com.chanmi.app.location.LocationManager
 import com.chanmi.app.ui.theme.chanmiColors
+import kotlinx.coroutines.launch
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -95,17 +99,17 @@ fun NearbyChurchScreen(
     viewModel: NearbyChurchViewModel = hiltViewModel(),
     locationManager: LocationManager
 ) {
-    val churches by viewModel.churches.collectAsState()
-    val clusters by viewModel.clusters.collectAsState()
-    val selectedChurch by viewModel.selectedChurch.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val showSearchButton by viewModel.showSearchThisAreaButton.collectAsState()
-    val isSearchingDifferentArea by viewModel.isSearchingDifferentArea.collectAsState()
-    val userLocation by locationManager.userLocation.collectAsState()
-    val permissionGranted by locationManager.permissionGranted.collectAsState()
+    val churches by viewModel.churches.collectAsStateWithLifecycle()
+    val clusters by viewModel.clusters.collectAsStateWithLifecycle()
+    val selectedChurch by viewModel.selectedChurch.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val showSearchButton by viewModel.showSearchThisAreaButton.collectAsStateWithLifecycle()
+    val isSearchingDifferentArea by viewModel.isSearchingDifferentArea.collectAsStateWithLifecycle()
+    val userLocation by locationManager.userLocation.collectAsStateWithLifecycle()
+    val permissionGranted by locationManager.permissionGranted.collectAsStateWithLifecycle()
 
-    var showList by remember { mutableStateOf(false) }
-    var showChurchDetail by remember { mutableStateOf(false) }
+    var showList by rememberSaveable { mutableStateOf(false) }
+    var showChurchDetail by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -161,8 +165,8 @@ fun NearbyChurchScreen(
                         context.startActivity(intent)
                     }
                 )
-            } else if (widthSizeClass == WindowWidthSizeClass.Expanded) {
-                // 태블릿: 지도 | 사이드 리스트
+            } else if (widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium) {
+                // 태블릿/폴드 펼침: 지도 | 사이드 리스트
                 Row(modifier = Modifier.fillMaxSize()) {
                     Box(
                         modifier = Modifier
@@ -187,10 +191,8 @@ fun NearbyChurchScreen(
                         )
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
+                    VerticalDivider(
+                        modifier = Modifier.fillMaxHeight()
                     )
 
                     // 사이드 리스트 (320dp)
@@ -336,6 +338,7 @@ private fun MapContent(
     modifier: Modifier = Modifier
 ) {
     val chanmiColors = MaterialTheme.chanmiColors
+    val coroutineScope = rememberCoroutineScope()
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
@@ -397,7 +400,13 @@ private fun MapContent(
                         state = MarkerState(position = cluster.center),
                         title = cluster.name,
                         onClick = {
-                            onClusterClick(cluster)
+                            onClusterClick(cluster)?.let { target ->
+                                coroutineScope.launch {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(target, 15f)
+                                    )
+                                }
+                            }
                             true
                         }
                     ) {

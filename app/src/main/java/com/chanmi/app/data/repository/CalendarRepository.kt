@@ -1,13 +1,12 @@
 package com.chanmi.app.data.repository
 
 import com.chanmi.app.data.local.DailyRecordDao
-import com.chanmi.app.data.model.DailyRecord
 import com.chanmi.app.data.model.DailyRecordWithDetails
 import com.chanmi.app.data.model.GoodDeed
 import com.chanmi.app.data.model.RosaryEntry
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import javax.inject.Inject
 
 class CalendarRepository @Inject constructor(
@@ -62,12 +61,10 @@ class CalendarRepository @Inject constructor(
     }
 
     private suspend fun getOrCreateRecord(date: LocalDate): Long {
-        val epochMillis = date.toEpochMillis()
-        val existing = dao.getRecord(epochMillis)
-        return existing?.record?.id ?: dao.insertRecord(DailyRecord(date = epochMillis))
+        return dao.getOrCreateRecord(date.toEpochMillis())
     }
 
     private fun LocalDate.toEpochMillis(): Long {
-        return this.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return this.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     }
 }

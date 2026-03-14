@@ -22,26 +22,32 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.chanmi.app.data.model.MysteryType
-import com.chanmi.app.data.repository.CalendarRepository
 import com.chanmi.app.ui.theme.ChanmiTheme
-import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RosaryCompletionScreen(
     selectedMystery: MysteryType,
     numberOfDecades: Int,
-    calendarRepository: CalendarRepository?,
+    onSave: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Auto-save rosary entry
+    // Auto-save rosary entry (only once, survives configuration changes)
+    var hasSaved by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        calendarRepository?.addRosaryEntry(LocalDate.now(), selectedMystery.key)
+        if (!hasSaved) {
+            onSave()
+            hasSaved = true
+        }
     }
 
     Scaffold(

@@ -53,10 +53,10 @@ object ChanmiIcons {
         "sun.max" -> Icons.Filled.LightMode
         "book.closed" -> Icons.Filled.Book
         "building.columns" -> Icons.Filled.Church
-        "circle.grid.cross" -> Icons.Filled.RadioButtonUnchecked
+        "circle.grid.cross" -> Icons.Filled.AutoAwesome
         "star" -> Icons.Filled.Star
         "cross" -> ImageVector.vectorResource(R.drawable.ic_latin_cross)
-        "candle" -> Icons.Filled.Favorite
+        "candle" -> Icons.Filled.LightMode
         "person.3" -> Icons.Filled.Groups
 
         // 탭 바 (참조용)

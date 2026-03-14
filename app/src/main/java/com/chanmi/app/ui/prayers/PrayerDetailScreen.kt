@@ -19,11 +19,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,11 +42,11 @@ fun PrayerDetailScreen(
     onNavigateBack: () -> Unit,
     viewModel: PrayersViewModel = hiltViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
     val prayer = remember(categories, prayerId) {
         categories.flatMap { it.prayers }.find { it.id == prayerId }
     }
-    var fontSize by rememberSaveable { mutableFloatStateOf(18f) }
+    val fontSize by viewModel.prayerFontSize.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -73,7 +70,7 @@ fun PrayerDetailScreen(
                 containerColor = MaterialTheme.colorScheme.surface,
                 actions = {
                     TextButton(
-                        onClick = { if (fontSize > MIN_FONT_SIZE) fontSize -= FONT_STEP },
+                        onClick = { if (fontSize > MIN_FONT_SIZE) viewModel.updatePrayerFontSize(fontSize - FONT_STEP) },
                         enabled = fontSize > MIN_FONT_SIZE,
                         modifier = Modifier.semantics {
                             contentDescription = "글씨 작게, 현재 ${fontSize.toInt()}포인트"
@@ -90,7 +87,7 @@ fun PrayerDetailScreen(
                     )
 
                     TextButton(
-                        onClick = { if (fontSize < MAX_FONT_SIZE) fontSize += FONT_STEP },
+                        onClick = { if (fontSize < MAX_FONT_SIZE) viewModel.updatePrayerFontSize(fontSize + FONT_STEP) },
                         enabled = fontSize < MAX_FONT_SIZE,
                         modifier = Modifier.semantics {
                             contentDescription = "글씨 크게, 현재 ${fontSize.toInt()}포인트"

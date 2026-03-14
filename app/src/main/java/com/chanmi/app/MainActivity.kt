@@ -33,8 +33,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onStart() {
+        super.onStart()
+        locationManager.startLocationUpdates()
+    }
+
+    override fun onStop() {
+        super.onStop()
         locationManager.stopLocationUpdates()
     }
 }

@@ -28,6 +28,8 @@ class LocationManager @Inject constructor(
     private val _permissionGranted = MutableStateFlow(false)
     val permissionGranted: StateFlow<Boolean> = _permissionGranted.asStateFlow()
 
+    private var isUpdating = false
+
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             result.lastLocation?.let {
@@ -45,14 +47,17 @@ class LocationManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun startLocationUpdates() {
-        if (!_permissionGranted.value) return
+        if (!_permissionGranted.value || isUpdating) return
         val request = LocationRequest.Builder(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY, 10_000L
         ).setMinUpdateIntervalMillis(5_000L).build()
         fusedClient.requestLocationUpdates(request, locationCallback, Looper.getMainLooper())
+        isUpdating = true
     }
 
     fun stopLocationUpdates() {
+        if (!isUpdating) return
         fusedClient.removeLocationUpdates(locationCallback)
+        isUpdating = false
     }
 }

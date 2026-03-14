@@ -24,8 +24,16 @@ interface DailyRecordDao {
     @Query("SELECT * FROM daily_records WHERE date = :date LIMIT 1")
     suspend fun getRecord(date: Long): DailyRecordWithDetails?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertRecord(record: DailyRecord): Long
+
+    @Transaction
+    suspend fun getOrCreateRecord(dateMillis: Long): Long {
+        val existing = getRecord(dateMillis)
+        if (existing != null) return existing.record.id
+        val id = insertRecord(DailyRecord(date = dateMillis))
+        return if (id != -1L) id else getRecord(dateMillis)!!.record.id
+    }
 
     @Insert
     suspend fun insertRosaryEntry(entry: RosaryEntry)

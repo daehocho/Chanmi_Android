@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,19 +48,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -71,14 +69,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chanmi.app.data.model.DecadeStep
 import com.chanmi.app.data.model.MysteryType
 import com.chanmi.app.data.model.RosaryPhase
-import com.chanmi.app.data.repository.CalendarRepository
 import com.chanmi.app.ui.theme.ChanmiTheme
-import java.time.LocalDate
-import javax.inject.Inject
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -86,21 +82,20 @@ import kotlin.math.sin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MysterySelectionScreen(
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     viewModel: RosaryViewModel = hiltViewModel(),
-    calendarRepository: CalendarRepository? = null,
-    onRosaryCompleted: (() -> Unit)? = null
 ) {
-    val currentPhase by viewModel.currentPhase.collectAsState()
-    val selectedMystery by viewModel.selectedMystery.collectAsState()
-    val isPraying by viewModel.isPraying.collectAsState()
-    val numberOfDecades by viewModel.numberOfDecades.collectAsState()
-    val elapsedSeconds by viewModel.elapsedSeconds.collectAsState()
-    val preferredHand by viewModel.preferredHand.collectAsState()
-    val hasSeenSwipeGuide by viewModel.hasSeenSwipeGuide.collectAsState()
+    val currentPhase by viewModel.currentPhase.collectAsStateWithLifecycle()
+    val selectedMystery by viewModel.selectedMystery.collectAsStateWithLifecycle()
+    val isPraying by viewModel.isPraying.collectAsStateWithLifecycle()
+    val numberOfDecades by viewModel.numberOfDecades.collectAsStateWithLifecycle()
+    val elapsedSeconds by viewModel.elapsedSeconds.collectAsStateWithLifecycle()
+    val preferredHand by viewModel.preferredHand.collectAsStateWithLifecycle()
+    val hasSeenSwipeGuide by viewModel.hasSeenSwipeGuide.collectAsStateWithLifecycle()
 
-    var showCompletion by remember { mutableStateOf(false) }
-    var isPrayerTextExpanded by remember { mutableStateOf(false) }
-    var showSwipeGuide by remember { mutableStateOf(false) }
+    var showCompletion by rememberSaveable { mutableStateOf(false) }
+    var isPrayerTextExpanded by rememberSaveable { mutableStateOf(false) }
+    var showSwipeGuide by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(currentPhase) {
         if (currentPhase is RosaryPhase.Completed) {
@@ -122,7 +117,7 @@ fun MysterySelectionScreen(
         RosaryCompletionScreen(
             selectedMystery = selectedMystery,
             numberOfDecades = numberOfDecades,
-            calendarRepository = calendarRepository,
+            onSave = { viewModel.saveCompletedRosary() },
             onDismiss = {
                 showCompletion = false
                 viewModel.reset()
@@ -168,12 +163,14 @@ fun MysterySelectionScreen(
                     isPrayerTextExpanded = isPrayerTextExpanded,
                     onTogglePrayerText = { isPrayerTextExpanded = !isPrayerTextExpanded },
                     preferredHand = preferredHand,
+                    widthSizeClass = widthSizeClass,
                 )
             } else {
                 NotPrayingLayout(
                     viewModel = viewModel,
                     selectedMystery = selectedMystery,
                     numberOfDecades = numberOfDecades,
+                    widthSizeClass = widthSizeClass,
                 )
             }
 
@@ -195,6 +192,7 @@ private fun PrayingLayout(
     isPrayerTextExpanded: Boolean,
     onTogglePrayerText: () -> Unit,
     preferredHand: String,
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
 ) {
     val haptic = LocalHapticFeedback.current
 
@@ -209,7 +207,8 @@ private fun PrayingLayout(
             currentPhase = currentPhase,
             selectedMystery = selectedMystery,
             currentDecade = viewModel.currentDecade,
-            onTap = {}
+            onTap = {},
+            widthSizeClass = widthSizeClass
         )
 
         // Swipe area
@@ -248,6 +247,7 @@ private fun NotPrayingLayout(
     viewModel: RosaryViewModel,
     selectedMystery: MysteryType,
     numberOfDecades: Int,
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
 ) {
     Column(
         modifier = Modifier
@@ -267,7 +267,8 @@ private fun NotPrayingLayout(
             currentPhase = RosaryPhase.MysterySelection,
             selectedMystery = selectedMystery,
             currentDecade = null,
-            onTap = { viewModel.startPraying() }
+            onTap = { viewModel.startPraying() },
+            widthSizeClass = widthSizeClass
         )
 
         PrayerTextCard(
@@ -338,16 +339,38 @@ private fun RosaryBeadCircle(
     currentPhase: RosaryPhase,
     selectedMystery: MysteryType,
     currentDecade: Int?,
-    onTap: () -> Unit
+    onTap: () -> Unit,
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact
 ) {
-    val beadSize = if (isPraying) 180.dp else 220.dp
-    val radius = if (isPraying) 90f else 110f
+    val isWide = widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium
+    val beadSize = when {
+        isWide && isPraying -> 260.dp
+        isWide -> 300.dp
+        isPraying -> 180.dp
+        else -> 220.dp
+    }
+    val containerSize = when {
+        isWide && isPraying -> 300.dp
+        isWide -> 340.dp
+        isPraying -> 220.dp
+        else -> 260.dp
+    }
     val goldAccent = ChanmiTheme.colors.goldAccent
     val primary = MaterialTheme.colorScheme.primary
 
+    // Animate bead radii for smooth state transitions
+    val beadScales = (0 until 10).map { i ->
+        val state = beadStateFor(i, isPraying, currentPhase)
+        animateFloatAsState(
+            targetValue = if (state == BeadState.CURRENT) 1.2f else 1.0f,
+            animationSpec = tween(durationMillis = 300),
+            label = "bead_scale_$i"
+        )
+    }
+
     Box(
         modifier = Modifier
-            .size(if (isPraying) 220.dp else 260.dp)
+            .size(containerSize)
             .clickable(onClick = onTap)
             .semantics {
                 contentDescription = if (isPraying) {
@@ -383,7 +406,7 @@ private fun RosaryBeadCircle(
                     BeadState.CURRENT -> primary.copy(alpha = 0.6f)
                     BeadState.INCOMPLETE -> goldAccent
                 }
-                val r = if (state == BeadState.CURRENT) beadRadius * 1.2f else beadRadius
+                val r = beadRadius * beadScales[i].value
 
                 drawCircle(color = color, radius = r, center = Offset(x, y))
             }

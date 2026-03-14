@@ -24,7 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,7 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -62,9 +63,9 @@ fun CalendarScreen(
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     viewModel: CalendarViewModel = hiltViewModel()
 ) {
-    val currentMonth by viewModel.currentMonth.collectAsState()
-    val selectedDate by viewModel.selectedDate.collectAsState()
-    val dailyRecords by viewModel.dailyRecords.collectAsState()
+    val currentMonth by viewModel.currentMonth.collectAsStateWithLifecycle()
+    val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
+    val dailyRecords by viewModel.dailyRecords.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -77,8 +78,8 @@ fun CalendarScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        if (widthSizeClass == WindowWidthSizeClass.Expanded) {
-            // 태블릿: 달력 | 상세 (HStack)
+        if (widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium) {
+            // 태블릿/폴드 펼침: 달력 | 상세 (HStack)
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -96,10 +97,8 @@ fun CalendarScreen(
                         .fillMaxHeight()
                 )
 
-                Divider(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
+                VerticalDivider(
+                    modifier = Modifier.fillMaxHeight()
                 )
 
                 if (selectedDate != null) {

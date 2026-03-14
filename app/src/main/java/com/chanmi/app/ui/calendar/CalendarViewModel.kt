@@ -7,6 +7,7 @@ import com.chanmi.app.data.model.GoodDeed
 import com.chanmi.app.data.model.RosaryEntry
 import com.chanmi.app.data.repository.CalendarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +33,7 @@ class CalendarViewModel @Inject constructor(
     val selectedDate: StateFlow<LocalDate?> = _selectedDate.asStateFlow()
 
     private val monthFormatter = DateTimeFormatter.ofPattern("yyyy년 M월", Locale.KOREAN)
+    private var loadRecordsJob: Job? = null
 
     val monthTitle: String
         get() = _currentMonth.value.atDay(1).format(monthFormatter)
@@ -106,14 +108,15 @@ class CalendarViewModel @Inject constructor(
     }
 
     private fun loadRecords() {
+        loadRecordsJob?.cancel()
         val ym = _currentMonth.value
-        viewModelScope.launch {
+        loadRecordsJob = viewModelScope.launch {
             repository.getRecordsForMonth(ym.year, ym.monthValue)
                 .collect { records ->
                     val map = mutableMapOf<LocalDate, DailyRecordWithDetails>()
                     for (record in records) {
                         val date = java.time.Instant.ofEpochMilli(record.record.date)
-                            .atZone(java.time.ZoneId.systemDefault())
+                            .atZone(java.time.ZoneOffset.UTC)
                             .toLocalDate()
                         map[date] = record
                     }

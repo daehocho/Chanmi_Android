@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.chanmi.app.data.model.DecadeStep
 import com.chanmi.app.data.model.MysteryType
 import com.chanmi.app.data.model.RosaryPhase
+import com.chanmi.app.data.repository.CalendarRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,11 +21,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class RosaryViewModel @Inject constructor(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val calendarRepository: CalendarRepository
 ) : ViewModel() {
 
     companion object {
@@ -246,6 +249,12 @@ class RosaryViewModel @Inject constructor(
     fun markSwipeGuideSeen() {
         viewModelScope.launch {
             dataStore.edit { it[HAS_SEEN_SWIPE_GUIDE_KEY] = true }
+        }
+    }
+
+    fun saveCompletedRosary() {
+        viewModelScope.launch {
+            calendarRepository.addRosaryEntry(LocalDate.now(), _selectedMystery.value.key)
         }
     }
 

@@ -100,13 +100,14 @@ fun ChanmiApp(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(ChanmiTab.ROSARY.route) {
-                MysterySelectionScreen()
+                MysterySelectionScreen(widthSizeClass = widthSizeClass)
             }
             composable(ChanmiTab.CALENDAR.route) {
                 CalendarScreen(widthSizeClass = widthSizeClass)
             }
             composable(ChanmiTab.PRAYERS.route) {
                 PrayerCategoryListScreen(
+                    widthSizeClass = widthSizeClass,
                     onNavigateToList = { categoryId, categoryName ->
                         val encoded = URLEncoder.encode(categoryName, "UTF-8")
                         navController.navigate("prayer_list/$categoryId/$encoded")
