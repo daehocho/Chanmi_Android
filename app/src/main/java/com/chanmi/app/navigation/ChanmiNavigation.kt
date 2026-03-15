@@ -67,6 +67,7 @@ fun ChanmiApp(
     val showBottomBar = currentRoute in tabRoutes
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             AnimatedVisibility(
                 visible = showBottomBar,

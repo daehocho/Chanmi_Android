@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
@@ -362,7 +363,7 @@ private fun SectionHeader(title: String, modifier: Modifier = Modifier) {
 
 fun goodDeedCategoryIcon(category: String): ImageVector = when (category) {
     "service" -> Icons.Filled.VolunteerActivism
-    "donation" -> Icons.Filled.Favorite
+    "donation" -> Icons.Filled.CardGiftcard
     "prayer" -> Icons.Filled.AutoAwesome
     "forgiveness" -> Icons.Filled.Favorite
     "other" -> Icons.Filled.Star

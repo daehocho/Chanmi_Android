@@ -2,6 +2,9 @@ package com.chanmi.app.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -109,16 +112,31 @@ fun ChanmiTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val chanmiColors = if (darkTheme) DarkChanmiColors else LightChanmiColors
 
-    // 상태바/네비게이션 바 색상 설정
+    // 상태바/네비게이션 바 색상 설정 (edge-to-edge 호환)
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            window.navigationBarColor = colorScheme.background.toArgb()
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
+            val activity = view.context as Activity
+            // enableEdgeToEdge로 상태바/네비게이션바 스타일 설정
+            // deprecated window.statusBarColor 대신 SystemBarStyle 사용
+            (activity as? ComponentActivity)?.enableEdgeToEdge(
+                statusBarStyle = if (darkTheme) {
+                    SystemBarStyle.dark(colorScheme.background.toArgb())
+                } else {
+                    SystemBarStyle.light(
+                        colorScheme.background.toArgb(),
+                        colorScheme.background.toArgb()
+                    )
+                },
+                navigationBarStyle = if (darkTheme) {
+                    SystemBarStyle.dark(colorScheme.background.toArgb())
+                } else {
+                    SystemBarStyle.light(
+                        colorScheme.background.toArgb(),
+                        colorScheme.background.toArgb()
+                    )
+                }
+            )
         }
     }
 
