@@ -6,7 +6,10 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.chanmi.app.data.local.ChanmiDatabase
 import com.chanmi.app.data.local.DailyRecordDao
+import com.chanmi.app.data.local.PrayerReminderDao
 import com.chanmi.app.data.repository.CalendarRepository
+import com.chanmi.app.data.repository.PrayerReminderRepository
+import com.chanmi.app.notification.AlarmScheduler
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,6 +29,25 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // v3: 기도 알림 테이블 추가
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS prayer_reminders (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    prayerId TEXT NOT NULL,
+                    prayerTitle TEXT NOT NULL,
+                    categoryName TEXT NOT NULL DEFAULT '',
+                    hour INTEGER NOT NULL,
+                    minute INTEGER NOT NULL,
+                    isEnabled INTEGER NOT NULL DEFAULT 1,
+                    weekdays TEXT NOT NULL DEFAULT '',
+                    createdAt INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): ChanmiDatabase {
@@ -34,7 +56,7 @@ object DatabaseModule {
             ChanmiDatabase::class.java,
             "chanmi_database"
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 
@@ -44,8 +66,22 @@ object DatabaseModule {
     }
 
     @Provides
+    fun providePrayerReminderDao(database: ChanmiDatabase): PrayerReminderDao {
+        return database.prayerReminderDao()
+    }
+
+    @Provides
     @Singleton
     fun provideCalendarRepository(dao: DailyRecordDao): CalendarRepository {
         return CalendarRepository(dao)
+    }
+
+    @Provides
+    @Singleton
+    fun providePrayerReminderRepository(
+        dao: PrayerReminderDao,
+        alarmScheduler: AlarmScheduler
+    ): PrayerReminderRepository {
+        return PrayerReminderRepository(dao, alarmScheduler)
     }
 }

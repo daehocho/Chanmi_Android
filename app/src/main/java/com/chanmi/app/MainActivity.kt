@@ -1,18 +1,18 @@
 package com.chanmi.app
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.State
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.core.content.ContextCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
@@ -20,6 +20,8 @@ import com.chanmi.app.location.LocationManager
 import com.chanmi.app.navigation.ChanmiApp
 import com.chanmi.app.ui.theme.ChanmiTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -35,7 +37,7 @@ enum class DevicePosture {
     HALF_OPENED_VERTICAL
 }
 
-val LocalDevicePosture = staticCompositionLocalOf { DevicePosture.NORMAL }
+val LocalDevicePosture = androidx.compose.runtime.staticCompositionLocalOf { DevicePosture.NORMAL }
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -43,10 +45,19 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var locationManager: LocationManager
 
+    @Inject
+    lateinit var dataStore: DataStore<Preferences>
+
+    // 알림 딥링크 처리용 SharedFlow
+    private val _deepLinkPrayerIdFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // 앱 최초 실행 시 딥링크 확인
+        handleDeepLink(intent)
 
         val devicePostureFlow = WindowInfoTracker.getOrCreate(this)
             .windowLayoutInfo(this)
@@ -76,10 +87,27 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalDevicePosture provides devicePosture.value) {
                     ChanmiApp(
                         widthSizeClass = windowSizeClass.widthSizeClass,
-                        locationManager = locationManager
+                        locationManager = locationManager,
+                        deepLinkPrayerIdFlow = _deepLinkPrayerIdFlow.asSharedFlow(),
+                        dataStore = dataStore
                     )
                 }
             }
+        }
+    }
+
+    // 앱이 이미 실행 중일 때 알림 탭 처리 (singleTop)
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeepLink(intent)
+    }
+
+    /** 알림의 PendingIntent에서 전달된 prayerId를 추출하여 딥링크 처리 */
+    private fun handleDeepLink(intent: Intent?) {
+        val navigateTo = intent?.getStringExtra(EXTRA_NAVIGATE_TO) ?: return
+        val prayerId = intent.getStringExtra(EXTRA_PRAYER_ID) ?: return
+        if (navigateTo == "prayer_detail") {
+            _deepLinkPrayerIdFlow.tryEmit(prayerId)
         }
     }
 
@@ -100,5 +128,10 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         locationManager.stopLocationUpdates()
+    }
+
+    companion object {
+        const val EXTRA_PRAYER_ID = "prayerId"
+        const val EXTRA_NAVIGATE_TO = "navigateTo"
     }
 }

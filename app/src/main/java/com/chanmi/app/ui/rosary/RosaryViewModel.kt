@@ -130,7 +130,7 @@ class RosaryViewModel @Inject constructor(
                     is DecadeStep.OurFather -> "주님의 기도"
                     is DecadeStep.HailMary -> "성모송 (${phase.step.count}/10)"
                     is DecadeStep.Glory -> "영광송"
-                    is DecadeStep.Fatima -> "파티마의 기도"
+                    is DecadeStep.Fatima -> "구원을 비는 기도"
                 }
                 "제${phase.number}단 - $stepName"
             }

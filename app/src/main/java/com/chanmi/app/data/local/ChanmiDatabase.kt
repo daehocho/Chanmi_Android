@@ -4,13 +4,15 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.chanmi.app.data.model.DailyRecord
 import com.chanmi.app.data.model.GoodDeed
+import com.chanmi.app.data.model.PrayerReminder
 import com.chanmi.app.data.model.RosaryEntry
 
 @Database(
-    entities = [DailyRecord::class, RosaryEntry::class, GoodDeed::class],
-    version = 2,
+    entities = [DailyRecord::class, RosaryEntry::class, GoodDeed::class, PrayerReminder::class],
+    version = 3,
     exportSchema = true
 )
 abstract class ChanmiDatabase : RoomDatabase() {
     abstract fun dailyRecordDao(): DailyRecordDao
+    abstract fun prayerReminderDao(): PrayerReminderDao
 }

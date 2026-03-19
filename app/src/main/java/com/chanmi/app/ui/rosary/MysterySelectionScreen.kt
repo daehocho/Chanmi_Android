@@ -441,6 +441,7 @@ private fun RosaryBeadCircle(
     }
     val goldAccent = MaterialTheme.chanmiColors.goldAccent
     val primary = MaterialTheme.colorScheme.primary
+    val trackColor = MaterialTheme.colorScheme.outlineVariant
 
     // 접근성: 모션 감소 설정 확인
     val reduceMotion = LocalReduceMotion
@@ -471,9 +472,9 @@ private fun RosaryBeadCircle(
         androidx.compose.foundation.Canvas(
             modifier = Modifier.size(beadSize)
         ) {
-            // Draw circle track (iOS systemGray4 matching)
+            // Draw circle track (theme-aware color for dark mode support)
             drawCircle(
-                color = Color(0xFFC7C7CC),
+                color = trackColor,
                 radius = size.minDimension / 2,
                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
             )

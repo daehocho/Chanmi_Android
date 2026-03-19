@@ -24,6 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -59,6 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chanmi.app.data.model.Prayer
 import com.chanmi.app.data.model.PrayerCategory
+import com.chanmi.app.ui.prayers.reminder.PrayerReminderViewModel
 import com.chanmi.app.ui.theme.ChanmiIcons
 import com.chanmi.app.ui.theme.chanmiColors
 
@@ -72,11 +75,15 @@ fun PrayerCategoryListScreen(
     widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
     onNavigateToList: (categoryId: String, categoryName: String) -> Unit,
     onNavigateToDetail: (prayerId: String) -> Unit,
-    viewModel: PrayersViewModel = hiltViewModel()
+    onNavigateToReminders: () -> Unit = {},
+    viewModel: PrayersViewModel = hiltViewModel(),
+    reminderViewModel: PrayerReminderViewModel = hiltViewModel()
 ) {
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+    val reminders by reminderViewModel.reminders.collectAsStateWithLifecycle()
+    val hasReminders = !reminders.isNullOrEmpty()
     var searchActive by rememberSaveable { mutableStateOf(false) }
 
     val isWide = widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium
@@ -90,6 +97,8 @@ fun PrayerCategoryListScreen(
             searchActive = searchActive,
             onSearchActiveChange = { searchActive = it },
             onSearchQueryChange = { viewModel.updateSearchQuery(it) },
+            onNavigateToReminders = onNavigateToReminders,
+            hasReminders = hasReminders,
             viewModel = viewModel,
         )
     } else {
@@ -103,6 +112,8 @@ fun PrayerCategoryListScreen(
             onSearchQueryChange = { viewModel.updateSearchQuery(it) },
             onNavigateToList = onNavigateToList,
             onNavigateToDetail = onNavigateToDetail,
+            onNavigateToReminders = onNavigateToReminders,
+            hasReminders = hasReminders,
         )
     }
 }
@@ -116,6 +127,8 @@ private fun PrayerAdaptiveLayout(
     searchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onNavigateToReminders: () -> Unit,
+    hasReminders: Boolean,
     viewModel: PrayersViewModel,
 ) {
     var selectedCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -133,6 +146,19 @@ private fun PrayerAdaptiveLayout(
         topBar = {
             TopAppBar(
                 title = { Text("기도문") },
+                actions = {
+                    // 기도 알림 진입점
+                    IconButton(
+                        onClick = onNavigateToReminders,
+                        modifier = Modifier.semantics { contentDescription = "기도 알림 설정" }
+                    ) {
+                        Icon(
+                            if (hasReminders) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                            contentDescription = "기도 알림 설정",
+                            tint = MaterialTheme.chanmiColors.goldAccent
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -339,11 +365,26 @@ private fun PrayerCompactLayout(
     onSearchQueryChange: (String) -> Unit,
     onNavigateToList: (categoryId: String, categoryName: String) -> Unit,
     onNavigateToDetail: (prayerId: String) -> Unit,
+    onNavigateToReminders: () -> Unit,
+    hasReminders: Boolean,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("기도문") },
+                actions = {
+                    // 기도 알림 진입점 (iOS bell 아이콘 대응)
+                    IconButton(
+                        onClick = onNavigateToReminders,
+                        modifier = Modifier.semantics { contentDescription = "기도 알림 설정" }
+                    ) {
+                        Icon(
+                            if (hasReminders) Icons.Filled.Notifications else Icons.Outlined.Notifications,
+                            contentDescription = "기도 알림 설정",
+                            tint = MaterialTheme.chanmiColors.goldAccent
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
