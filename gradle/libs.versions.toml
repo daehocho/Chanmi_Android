@@ -16,6 +16,7 @@ hilt-navigation-compose = "1.2.0"
 core-ktx = "1.15.0"
 activity-compose = "1.9.3"
 window = "1.2.0"
+play-review = "2.0.2"
 
 [libraries]
 # Compose
@@ -49,6 +50,9 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "maps-compose" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "play-services-maps" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "play-services-location" }
+
+# Google Play In-App Review
+play-review-ktx = { group = "com.google.android.play", name = "review-ktx", version.ref = "play-review" }
 
 # DataStore
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -213,18 +215,22 @@ private fun PrayerAdaptiveLayout(
                         .fillMaxWidth()
                         .padding(horizontal = if (searchActive) 0.dp else 8.dp),
                 ) {
-                    LazyColumn(
-                        contentPadding = PaddingValues(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(searchResults, key = { it.id }) { prayer ->
-                            PrayerSearchResultCard(
-                                prayer = prayer,
-                                onClick = {
-                                    onSearchActiveChange(false)
-                                    selectedPrayerId = prayer.id
-                                }
-                            )
+                    if (searchQuery.isNotEmpty() && searchResults.isEmpty()) {
+                        SearchEmptyState(searchQuery = searchQuery)
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(searchResults, key = { it.id }) { prayer ->
+                                PrayerSearchResultCard(
+                                    prayer = prayer,
+                                    onClick = {
+                                        onSearchActiveChange(false)
+                                        selectedPrayerId = prayer.id
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -433,18 +439,22 @@ private fun PrayerCompactLayout(
                     .fillMaxWidth()
                     .padding(horizontal = if (searchActive) 0.dp else 16.dp),
             ) {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(searchResults, key = { it.id }) { prayer ->
-                        PrayerSearchResultCard(
-                            prayer = prayer,
-                            onClick = {
-                                onSearchActiveChange(false)
-                                onNavigateToDetail(prayer.id)
-                            }
-                        )
+                if (searchQuery.isNotEmpty() && searchResults.isEmpty()) {
+                    SearchEmptyState(searchQuery = searchQuery)
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(searchResults, key = { it.id }) { prayer ->
+                            PrayerSearchResultCard(
+                                prayer = prayer,
+                                onClick = {
+                                    onSearchActiveChange(false)
+                                    onNavigateToDetail(prayer.id)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -570,6 +580,40 @@ private fun PrayerListCard(
                 modifier = Modifier.size(16.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun SearchEmptyState(searchQuery: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "'${searchQuery}'에 대한 검색 결과가 없습니다"
+            },
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Default.SearchOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "검색 결과 없음",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "'${searchQuery}'에 대한 검색 결과가 없습니다",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
     }
 }
 

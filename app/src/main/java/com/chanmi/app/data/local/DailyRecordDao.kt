@@ -41,6 +41,12 @@ interface DailyRecordDao {
     @Insert
     suspend fun insertGoodDeed(deed: GoodDeed)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun reInsertRosaryEntry(entry: RosaryEntry)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun reInsertGoodDeed(deed: GoodDeed)
+
     @Delete
     suspend fun deleteRosaryEntry(entry: RosaryEntry)
 

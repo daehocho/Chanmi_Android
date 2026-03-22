@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.chanmi.app.data.model.MysteryType
 import com.chanmi.app.ui.theme.chanmiColors
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +41,8 @@ fun RosaryCompletionScreen(
     selectedMystery: MysteryType,
     numberOfDecades: Int,
     onSave: () -> Unit,
-    onDismiss: () -> Unit
+    onRequestReview: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     // Auto-save rosary entry (only once, survives configuration changes)
     var hasSaved by rememberSaveable { mutableStateOf(false) }
@@ -48,6 +50,8 @@ fun RosaryCompletionScreen(
         if (!hasSaved) {
             onSave()
             hasSaved = true
+            delay(1000)
+            onRequestReview()
         }
     }
 
@@ -78,7 +82,7 @@ fun RosaryCompletionScreen(
 
             Icon(
                 Icons.Default.CheckCircle,
-                contentDescription = null,
+                contentDescription = "${selectedMystery.displayName} ${numberOfDecades}단 기도 완료",
                 tint = MaterialTheme.chanmiColors.goldAccent,
                 modifier = Modifier.size(80.dp)
             )

@@ -48,6 +48,13 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // v4: rosary_entries에 decadeCount 컬럼 추가 (기도 단수 per-record 저장)
+            db.execSQL("ALTER TABLE rosary_entries ADD COLUMN decadeCount INTEGER NOT NULL DEFAULT 5")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): ChanmiDatabase {
@@ -56,7 +63,7 @@ object DatabaseModule {
             ChanmiDatabase::class.java,
             "chanmi_database"
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 

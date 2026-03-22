@@ -1,5 +1,6 @@
 package com.chanmi.app.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -19,5 +20,7 @@ data class RosaryEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val mysteryType: String,
     val completedAt: Long,
-    val dailyRecordId: Long
+    val dailyRecordId: Long,
+    @ColumnInfo(name = "decadeCount", defaultValue = "5")
+    val decadeCount: Int = 5
 )

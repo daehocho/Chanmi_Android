@@ -1,25 +1,29 @@
 package com.chanmi.app.ui.theme
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Church
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Article
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import com.chanmi.app.R
 
 /**
- * iOS SF Symbol → Android Material Icon 매핑
+ * iOS SF Symbol -> Android Material Icon 매핑
  *
  * 탭 아이콘과 기도문 카테고리 아이콘을 통합 관리합니다.
  */
@@ -28,7 +32,7 @@ object ChanmiIcons {
     // ===== 탭 바 아이콘 =====
     val RosaryTab: ImageVector = Icons.Filled.AutoAwesome      // hands.and.sparkles
     val CalendarTab: ImageVector = Icons.Filled.CalendarMonth   // calendar
-    val PrayersTab: ImageVector = Icons.Filled.MenuBook         // book
+    val PrayersTab: ImageVector = Icons.AutoMirrored.Filled.MenuBook         // book
     val NearbyChurchTab: ImageVector = Icons.Filled.LocationOn  // mappin.and.ellipse
 
     // ===== 기도문 카테고리 아이콘 (prayers.json icon 필드 매핑) =====
@@ -38,14 +42,17 @@ object ChanmiIcons {
      * @Composable 컨텍스트가 필요합니다 (커스텀 벡터 리소스 로드를 위해).
      *
      * 카테고리별 매핑:
-     * - sun.max          → LightMode             (일상 기도)
-     * - book.closed      → Book                  (주요 기도)
-     * - building.columns → Church                (미사 기도)
-     * - circle.grid.cross → RadioButtonUnchecked (묵주 기도)
-     * - star             → Star                  (성모 기도)
-     * - cross            → ic_latin_cross (커스텀) (십자가의 길)
-     * - candle           → Favorite              (연도 기도)
-     * - person.3         → Groups                (성인 기도)
+     * - sun.max          -> LightMode             (일상 기도)
+     * - book.closed      -> Book                  (주요 기도)
+     * - building.columns -> Church                (미사 기도)
+     * - circle.grid.cross -> AutoAwesome          (묵주 기도)
+     * - star             -> Star                  (성모 기도)
+     * - cross            -> ic_latin_cross (커스텀) (십자가의 길)
+     * - candle           -> LocalFireDepartment   (연도 기도)
+     * - person.3         -> Groups                (성인 기도)
+     * - quote.bubble     -> RecordVoiceOver       (호칭 기도)
+     * - house.fill       -> Home                  (가정 기도)
+     * - square.grid.2x2  -> Apps                  (여러 가지 기도)
      */
     @Composable
     fun fromSfSymbol(sfSymbol: String): ImageVector = when (sfSymbol) {
@@ -56,13 +63,16 @@ object ChanmiIcons {
         "circle.grid.cross" -> Icons.Filled.AutoAwesome
         "star" -> Icons.Filled.Star
         "cross" -> ImageVector.vectorResource(R.drawable.ic_latin_cross)
-        "candle" -> Icons.Filled.LightMode
+        "candle" -> Icons.Filled.LocalFireDepartment
         "person.3" -> Icons.Filled.Groups
+        "quote.bubble" -> Icons.Filled.RecordVoiceOver
+        "house.fill" -> Icons.Filled.Home
+        "square.grid.2x2" -> Icons.Filled.Apps
 
         // 탭 바 (참조용)
         "hands.and.sparkles" -> Icons.Filled.AutoAwesome
         "calendar" -> Icons.Filled.CalendarMonth
-        "book" -> Icons.Filled.MenuBook
+        "book" -> Icons.AutoMirrored.Filled.MenuBook
         "mappin.and.ellipse" -> Icons.Filled.LocationOn
 
         // 기타 앱 내 사용 아이콘
@@ -70,6 +80,6 @@ object ChanmiIcons {
         "star.fill" -> Icons.Filled.Star
 
         // 기본값
-        else -> Icons.Outlined.Article
+        else -> Icons.AutoMirrored.Outlined.Article
     }
 }

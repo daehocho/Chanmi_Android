@@ -54,6 +54,8 @@ fun DayDetailInlineView(
     date: LocalDate,
     record: DailyRecordWithDetails?,
     viewModel: CalendarViewModel,
+    onDeleteRosary: (RosaryEntry) -> Unit = viewModel::deleteRosaryEntry,
+    onDeleteGoodDeed: (GoodDeed) -> Unit = viewModel::deleteGoodDeed,
     modifier: Modifier = Modifier
 ) {
     var showAddGoodDeed by remember { mutableStateOf(false) }
@@ -74,10 +76,10 @@ fun DayDetailInlineView(
         DayDetailContent(
             record = record,
             onAddRosary = { showAddRosary = true },
-            onDeleteRosary = viewModel::deleteRosaryEntry,
+            onDeleteRosary = onDeleteRosary,
             onAddGoodDeed = { showAddGoodDeed = true },
             onEditGoodDeed = { editingDeed = it },
-            onDeleteGoodDeed = viewModel::deleteGoodDeed,
+            onDeleteGoodDeed = onDeleteGoodDeed,
             modifier = Modifier.weight(1f)
         )
     }
@@ -106,8 +108,8 @@ fun DayDetailInlineView(
     if (showAddRosary) {
         AddRosaryDialog(
             onDismiss = { showAddRosary = false },
-            onSave = { mysteryType ->
-                viewModel.addRosaryEntry(date, mysteryType)
+            onSave = { mysteryType, decadeCount ->
+                viewModel.addRosaryEntry(date, mysteryType, decadeCount)
                 showAddRosary = false
             }
         )
@@ -121,6 +123,8 @@ fun CompactDayDetailView(
     date: LocalDate,
     record: DailyRecordWithDetails?,
     viewModel: CalendarViewModel,
+    onDeleteRosary: (RosaryEntry) -> Unit = viewModel::deleteRosaryEntry,
+    onDeleteGoodDeed: (GoodDeed) -> Unit = viewModel::deleteGoodDeed,
     modifier: Modifier = Modifier
 ) {
     var showAddGoodDeed by remember { mutableStateOf(false) }
@@ -145,10 +149,10 @@ fun CompactDayDetailView(
         DayDetailContent(
             record = record,
             onAddRosary = { showAddRosary = true },
-            onDeleteRosary = viewModel::deleteRosaryEntry,
+            onDeleteRosary = onDeleteRosary,
             onAddGoodDeed = { showAddGoodDeed = true },
             onEditGoodDeed = { editingDeed = it },
-            onDeleteGoodDeed = viewModel::deleteGoodDeed,
+            onDeleteGoodDeed = onDeleteGoodDeed,
             modifier = Modifier.weight(1f)
         )
     }
@@ -177,8 +181,8 @@ fun CompactDayDetailView(
     if (showAddRosary) {
         AddRosaryDialog(
             onDismiss = { showAddRosary = false },
-            onSave = { mysteryType ->
-                viewModel.addRosaryEntry(date, mysteryType)
+            onSave = { mysteryType, decadeCount ->
+                viewModel.addRosaryEntry(date, mysteryType, decadeCount)
                 showAddRosary = false
             }
         )
@@ -234,11 +238,13 @@ private fun DayDetailContent(
                     .toLocalTime()
                     .format(timeFormatter)
 
+                val decadeCount = entry.decadeCount.coerceIn(5, 50)
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
-                        .semantics { contentDescription = "$mysteryName 완료" },
+                        .semantics { contentDescription = "$mysteryName ${decadeCount}단 완료" },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -250,15 +256,20 @@ private fun DayDetailContent(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(mysteryName, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            completedTime,
+                            "${decadeCount}단 · $completedTime",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    IconButton(onClick = { onDeleteRosary(entry) }) {
+                    IconButton(
+                        onClick = { onDeleteRosary(entry) },
+                        modifier = Modifier.semantics {
+                            contentDescription = "$mysteryName 묵주기도 삭제"
+                        }
+                    ) {
                         Icon(
                             Icons.Filled.Delete,
-                            contentDescription = "삭제",
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -302,7 +313,10 @@ private fun DayDetailContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onEditGoodDeed(deed) }
+                        .clickable(
+                            onClick = { onEditGoodDeed(deed) },
+                            onClickLabel = "탭하여 수정"
+                        )
                         .padding(vertical = 6.dp)
                         .semantics {
                             contentDescription = "${goodDeedCategoryName(deed.category)}, ${deed.content}"
@@ -328,10 +342,15 @@ private fun DayDetailContent(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    IconButton(onClick = { onDeleteGoodDeed(deed) }) {
+                    IconButton(
+                        onClick = { onDeleteGoodDeed(deed) },
+                        modifier = Modifier.semantics {
+                            contentDescription = "선행 '${deed.content}' 삭제"
+                        }
+                    ) {
                         Icon(
                             Icons.Filled.Delete,
-                            contentDescription = "삭제",
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

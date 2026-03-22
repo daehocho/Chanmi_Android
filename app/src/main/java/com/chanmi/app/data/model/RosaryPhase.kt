@@ -15,7 +15,7 @@ sealed class RosaryPhase {
     data object OpeningOurFather : RosaryPhase()
     data class OpeningHailMary(val count: Int) : RosaryPhase() // 1~3
     data object OpeningGlory : RosaryPhase()
-    data class Decade(val number: Int, val step: DecadeStep) : RosaryPhase() // 1~5
+    data class Decade(val number: Int, val step: DecadeStep) : RosaryPhase() // 1~50
     data object SalveRegina : RosaryPhase()
     data object ClosingPrayer : RosaryPhase()
     data object Completed : RosaryPhase()

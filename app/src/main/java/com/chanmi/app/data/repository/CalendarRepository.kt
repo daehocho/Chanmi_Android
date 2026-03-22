@@ -25,13 +25,14 @@ class CalendarRepository @Inject constructor(
         return dao.getRecord(date.toEpochMillis())
     }
 
-    suspend fun addRosaryEntry(date: LocalDate, mysteryType: String) {
+    suspend fun addRosaryEntry(date: LocalDate, mysteryType: String, decadeCount: Int = 5) {
         val recordId = getOrCreateRecord(date)
         dao.insertRosaryEntry(
             RosaryEntry(
                 mysteryType = mysteryType,
                 completedAt = System.currentTimeMillis(),
-                dailyRecordId = recordId
+                dailyRecordId = recordId,
+                decadeCount = decadeCount
             )
         )
     }
@@ -52,8 +53,16 @@ class CalendarRepository @Inject constructor(
         dao.deleteRosaryEntry(entry)
     }
 
+    suspend fun reInsertRosaryEntry(entry: RosaryEntry) {
+        dao.reInsertRosaryEntry(entry)
+    }
+
     suspend fun deleteGoodDeed(deed: GoodDeed) {
         dao.deleteGoodDeed(deed)
+    }
+
+    suspend fun reInsertGoodDeed(deed: GoodDeed) {
+        dao.reInsertGoodDeed(deed)
     }
 
     suspend fun updateGoodDeed(deed: GoodDeed, content: String, category: String) {

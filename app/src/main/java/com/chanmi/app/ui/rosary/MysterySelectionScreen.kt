@@ -1,11 +1,8 @@
 package com.chanmi.app.ui.rosary
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -35,7 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,6 +43,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -67,8 +66,13 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -97,10 +101,18 @@ fun MysterySelectionScreen(
     val numberOfDecades by viewModel.numberOfDecades.collectAsStateWithLifecycle()
     val preferredHand by viewModel.preferredHand.collectAsStateWithLifecycle()
     val hasSeenSwipeGuide by viewModel.hasSeenSwipeGuide.collectAsStateWithLifecycle()
+    val reviewInfo by viewModel.reviewInfo.collectAsStateWithLifecycle()
 
     var showCompletion by rememberSaveable { mutableStateOf(false) }
     var isPrayerTextExpanded by rememberSaveable { mutableStateOf(false) }
     var showSwipeGuide by rememberSaveable { mutableStateOf(false) }
+
+    // In-App Review: ReviewInfo가 준비되면 동일 ReviewManager 인스턴스로 launchReviewFlow 실행
+    val activity = LocalContext.current as? Activity
+    LaunchedEffect(reviewInfo) {
+        reviewInfo ?: return@LaunchedEffect
+        activity?.let { viewModel.launchReview(it) }
+    }
 
     LaunchedEffect(currentPhase) {
         if (currentPhase is RosaryPhase.Completed) {
@@ -123,6 +135,7 @@ fun MysterySelectionScreen(
             selectedMystery = selectedMystery,
             numberOfDecades = numberOfDecades,
             onSave = { viewModel.saveCompletedRosary() },
+            onRequestReview = { viewModel.requestReviewIfNeeded() },
             onDismiss = {
                 showCompletion = false
                 viewModel.reset()
@@ -235,7 +248,8 @@ private fun PrayingLayout(
                         selectedMystery = selectedMystery,
                         currentDecade = currentDecade,
                         onTap = {},
-                        widthSizeClass = widthSizeClass
+                        widthSizeClass = widthSizeClass,
+                        viewModel = viewModel
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ProgressTimerSection(
@@ -257,8 +271,14 @@ private fun PrayingLayout(
                     SwipeArea(
                         preferredHand = preferredHand,
                         onAdvance = {
-                            viewModel.debouncedAdvance()
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val isDecadeChange = viewModel.isDecadeTransition()
+                            val advanced = viewModel.debouncedAdvance()
+                            if (advanced) {
+                                haptic.performHapticFeedback(
+                                    if (isDecadeChange) HapticFeedbackType.LongPress
+                                    else HapticFeedbackType.TextHandleMove
+                                )
+                            }
                         }
                     )
                 } else {
@@ -288,7 +308,8 @@ private fun PrayingLayout(
                 selectedMystery = selectedMystery,
                 currentDecade = currentDecade,
                 onTap = {},
-                widthSizeClass = widthSizeClass
+                widthSizeClass = widthSizeClass,
+                viewModel = viewModel
             )
 
             // Swipe area
@@ -296,8 +317,14 @@ private fun PrayingLayout(
                 SwipeArea(
                     preferredHand = preferredHand,
                     onAdvance = {
-                        viewModel.debouncedAdvance()
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val isDecadeChange = viewModel.isDecadeTransition()
+                        val advanced = viewModel.debouncedAdvance()
+                        if (advanced) {
+                            haptic.performHapticFeedback(
+                                if (isDecadeChange) HapticFeedbackType.LongPress
+                                else HapticFeedbackType.TextHandleMove
+                            )
+                        }
                     }
                 )
             } else {
@@ -352,7 +379,8 @@ private fun NotPrayingLayout(
             selectedMystery = selectedMystery,
             currentDecade = null,
             onTap = { viewModel.startPraying() },
-            widthSizeClass = widthSizeClass
+            widthSizeClass = widthSizeClass,
+            viewModel = viewModel
         )
 
         PrayerTextCard(
@@ -424,7 +452,8 @@ private fun RosaryBeadCircle(
     selectedMystery: MysteryType,
     currentDecade: Int?,
     onTap: () -> Unit,
-    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact
+    widthSizeClass: WindowWidthSizeClass = WindowWidthSizeClass.Compact,
+    viewModel: RosaryViewModel? = null
 ) {
     val isWide = widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium
     val beadSize = when {
@@ -465,6 +494,14 @@ private fun RosaryBeadCircle(
                     "${currentDecade?.let { "제${it}단" } ?: ""} 진행 중"
                 } else {
                     "${selectedMystery.displayName} 묵주 구슬, 탭하여 시작"
+                }
+                if (isPraying && viewModel != null) {
+                    customActions = listOf(
+                        CustomAccessibilityAction("다음 기도로 진행") {
+                            viewModel.debouncedAdvance()
+                            true
+                        }
+                    )
                 }
             },
         contentAlignment = Alignment.Center
@@ -594,7 +631,15 @@ private fun SwipeZone(
                     }
                 )
             }
-            .semantics { contentDescription = "아래로 쓸어내려 다음 기도로 넘어가기" },
+            .semantics {
+                contentDescription = "아래로 쓸어내려 다음 기도로 넘어가기"
+                customActions = listOf(
+                    CustomAccessibilityAction("다음 기도로 진행") {
+                        onAdvance()
+                        true
+                    }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -642,11 +687,14 @@ private fun PrayerTextCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onToggle)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .semantics {
+                        stateDescription = if (isExpanded) "펼쳐짐" else "접혀짐"
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Default.MenuBook,
+                    Icons.AutoMirrored.Filled.MenuBook,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
@@ -656,7 +704,10 @@ private fun PrayerTextCard(
                     Text(
                         phaseTitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                        }
                     )
                     if (meditationTopic != null) {
                         Text(
@@ -714,48 +765,88 @@ private fun PrayerTextCard(
     }
 }
 
-// ===== Decade Selector =====
+// ===== Decade Selector (Slider 기반) =====
 
 @Composable
 private fun DecadeSelector(
     selected: Int,
     onSelect: (Int) -> Unit
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    val haptic = LocalHapticFeedback.current
+    var previousValue by remember { mutableStateOf(selected) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
         Text(
             "기도 단수",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "${selected}단",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            estimatedTime(selected),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            for (decade in 1..5) {
-                val isSelected = decade == selected
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surface
-                        )
-                        .then(
-                            if (!isSelected) Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                            else Modifier
-                        )
-                        .clickable { onSelect(decade) }
-                        .semantics { contentDescription = "${decade}단" },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "$decade",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                        else MaterialTheme.colorScheme.onSurface
-                    )
+        Slider(
+            value = selected.toFloat(),
+            onValueChange = { newValue ->
+                val rounded = newValue.roundToInt()
+                if (rounded != previousValue) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    previousValue = rounded
                 }
-            }
+                onSelect(rounded)
+            },
+            valueRange = 5f..50f,
+            steps = 8,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = "기도 단수 선택, 현재 ${selected}단"
+                }
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "5단",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "50단",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+    }
+}
+
+private fun estimatedTime(decades: Int): String {
+    val minutes = decades * 3
+    return if (minutes >= 60) {
+        val hours = minutes / 60
+        val remainMinutes = minutes % 60
+        if (remainMinutes == 0) "약 ${hours}시간 소요"
+        else "약 ${hours}시간 ${remainMinutes}분 소요"
+    } else {
+        "약 ${minutes}분 소요"
     }
 }
 

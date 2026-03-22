@@ -6,6 +6,7 @@ import com.chanmi.app.data.model.ChurchCluster
 import com.chanmi.app.data.model.ChurchItem
 import com.chanmi.app.data.repository.ChurchRepository
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -149,9 +150,17 @@ class NearbyChurchViewModel @Inject constructor(
         _selectedChurch.value = null
     }
 
-    fun zoomToCluster(cluster: ChurchCluster): LatLng? {
+    /**
+     * 클러스터 탭 시 클러스터 내 성당들의 범위에 맞춰 LatLngBounds를 반환한다.
+     * 성당이 1개뿐이면 null을 반환하여 호출부에서 단일 마커 선택으로 처리하게 한다.
+     */
+    fun zoomToCluster(cluster: ChurchCluster): LatLngBounds? {
         if (cluster.count < 2) return null
-        return cluster.center
+        val builder = LatLngBounds.builder()
+        cluster.churches.forEach { church ->
+            builder.include(LatLng(church.latitude, church.longitude))
+        }
+        return builder.build()
     }
 
     private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {

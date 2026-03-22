@@ -19,6 +19,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -148,11 +149,14 @@ fun GoodDeedFormDialog(
 @Composable
 fun AddRosaryDialog(
     onDismiss: () -> Unit,
-    onSave: (mysteryType: String) -> Unit
+    onSave: (mysteryType: String, decadeCount: Int) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
     var selectedMystery by remember { mutableStateOf(MysteryType.JOYFUL) }
     var mysteryExpanded by remember { mutableStateOf(false) }
+    var selectedDecadeCount by remember { mutableIntStateOf(5) }
+    var decadeExpanded by remember { mutableStateOf(false) }
+    val decadeOptions = (1..10).map { it * 5 } // [5, 10, 15, ..., 50]
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -178,7 +182,7 @@ fun AddRosaryDialog(
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = { onSave(selectedMystery.key) }) {
+                TextButton(onClick = { onSave(selectedMystery.key, selectedDecadeCount) }) {
                     Text("저장")
                 }
             }
@@ -211,6 +215,40 @@ fun AddRosaryDialog(
                             onClick = {
                                 selectedMystery = mystery
                                 mysteryExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 단수 선택 드롭다운
+            ExposedDropdownMenuBox(
+                expanded = decadeExpanded,
+                onExpandedChange = { decadeExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = "${selectedDecadeCount}단",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("기도 단수") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = decadeExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+
+                ExposedDropdownMenu(
+                    expanded = decadeExpanded,
+                    onDismissRequest = { decadeExpanded = false }
+                ) {
+                    decadeOptions.forEach { count ->
+                        DropdownMenuItem(
+                            text = { Text("${count}단") },
+                            onClick = {
+                                selectedDecadeCount = count
+                                decadeExpanded = false
                             }
                         )
                     }

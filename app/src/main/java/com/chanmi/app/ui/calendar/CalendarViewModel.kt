@@ -77,9 +77,9 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    fun addRosaryEntry(date: LocalDate, mysteryType: String) {
+    fun addRosaryEntry(date: LocalDate, mysteryType: String, decadeCount: Int = 5) {
         viewModelScope.launch {
-            repository.addRosaryEntry(date, mysteryType)
+            repository.addRosaryEntry(date, mysteryType, decadeCount)
         }
     }
 
@@ -104,6 +104,18 @@ class CalendarViewModel @Inject constructor(
     fun updateGoodDeed(deed: GoodDeed, content: String, category: String) {
         viewModelScope.launch {
             repository.updateGoodDeed(deed, content, category)
+        }
+    }
+
+    fun undoDeleteRosaryEntry(entry: RosaryEntry) {
+        viewModelScope.launch {
+            repository.reInsertRosaryEntry(entry)
+        }
+    }
+
+    fun undoDeleteGoodDeed(deed: GoodDeed) {
+        viewModelScope.launch {
+            repository.reInsertGoodDeed(deed)
         }
     }
 

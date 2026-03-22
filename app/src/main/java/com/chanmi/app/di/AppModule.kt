@@ -7,6 +7,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.chanmi.app.data.repository.ChurchRepository
 import com.chanmi.app.data.repository.PrayerRepository
 import com.chanmi.app.location.LocationManager
+import com.google.android.play.core.review.ReviewManager
+import com.google.android.play.core.review.ReviewManagerFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,5 +44,11 @@ object AppModule {
     @Singleton
     fun provideLocationManager(@ApplicationContext context: Context): LocationManager {
         return LocationManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideReviewManager(@ApplicationContext context: Context): ReviewManager {
+        return ReviewManagerFactory.create(context)
     }
 }

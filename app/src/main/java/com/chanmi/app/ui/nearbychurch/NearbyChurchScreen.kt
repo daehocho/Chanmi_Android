@@ -87,6 +87,7 @@ import kotlinx.coroutines.launch
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -383,7 +384,7 @@ private fun MapContent(
     showSearchButton: Boolean,
     isLoading: Boolean,
     onMarkerClick: (ChurchItem) -> Unit,
-    onClusterClick: (ChurchCluster) -> LatLng?,
+    onClusterClick: (ChurchCluster) -> LatLngBounds?,
     onCameraMove: (LatLng, Double) -> Unit,
     onSearchThisArea: () -> Unit,
     modifier: Modifier = Modifier
@@ -451,10 +452,10 @@ private fun MapContent(
                         state = MarkerState(position = cluster.center),
                         title = cluster.name,
                         onClick = {
-                            onClusterClick(cluster)?.let { target ->
+                            onClusterClick(cluster)?.let { bounds ->
                                 coroutineScope.launch {
                                     cameraPositionState.animate(
-                                        CameraUpdateFactory.newLatLngZoom(target, 15f)
+                                        CameraUpdateFactory.newLatLngBounds(bounds, 100)
                                     )
                                 }
                             }

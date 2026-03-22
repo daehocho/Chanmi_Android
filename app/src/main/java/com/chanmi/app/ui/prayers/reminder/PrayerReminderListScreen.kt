@@ -56,6 +56,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -106,6 +110,22 @@ fun PrayerReminderListScreen(
         }
         // 화면 복귀 시 정확 알림 권한도 재확인
         viewModel.checkExactAlarmPermission()
+    }
+
+    // 앱이 포그라운드로 복귀할 때 알림 권한 상태 재확인 (iOS scenePhase .active 대응)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val permission = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                    notificationPermissionGranted = permission == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                viewModel.checkExactAlarmPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // 알림 추가 시 권한 확인 후 네비게이션
@@ -256,7 +276,7 @@ fun PrayerReminderListScreen(
                                         val result = snackbarHostState.showSnackbar(
                                             message = "알림이 삭제되었습니다",
                                             actionLabel = "실행 취소",
-                                            duration = SnackbarDuration.Short
+                                            duration = SnackbarDuration.Long
                                         )
                                         if (result == SnackbarResult.ActionPerformed) {
                                             viewModel.undoDelete(reminder)

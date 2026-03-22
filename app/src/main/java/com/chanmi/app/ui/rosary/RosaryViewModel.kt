@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -12,6 +13,9 @@ import com.chanmi.app.data.model.DecadeStep
 import com.chanmi.app.data.model.MysteryType
 import com.chanmi.app.data.model.RosaryPhase
 import com.chanmi.app.data.repository.CalendarRepository
+import android.app.Activity
+import com.google.android.play.core.review.ReviewInfo
+import com.google.android.play.core.review.ReviewManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -30,12 +35,15 @@ import javax.inject.Inject
 class RosaryViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val dataStore: DataStore<Preferences>,
-    private val calendarRepository: CalendarRepository
+    private val calendarRepository: CalendarRepository,
+    private val reviewManager: ReviewManager
 ) : ViewModel() {
 
     companion object {
         private val PREFERRED_HAND_KEY = stringPreferencesKey("preferredHand")
         private val HAS_SEEN_SWIPE_GUIDE_KEY = booleanPreferencesKey("hasSeenSwipeGuide")
+        private val HAS_REQUESTED_REVIEW_KEY = booleanPreferencesKey("hasRequestedReview")
+        private val NUMBER_OF_DECADES_KEY = intPreferencesKey("numberOfDecades")
         private const val KEY_IS_PRAYING = "isPraying"
         private const val KEY_SELECTED_MYSTERY = "selectedMystery"
         private const val KEY_NUMBER_OF_DECADES = "numberOfDecades"
@@ -73,9 +81,23 @@ class RosaryViewModel @Inject constructor(
         .map { it[HAS_SEEN_SWIPE_GUIDE_KEY] ?: false }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    private val _reviewInfo = MutableStateFlow<ReviewInfo?>(null)
+    val reviewInfo: StateFlow<ReviewInfo?> = _reviewInfo.asStateFlow()
+
     private var timerJob: Job? = null
     private var lastAdvanceTime = 0L
     private val advanceDebounceMs = 300L
+
+    init {
+        // DataStore에서 numberOfDecades 복원
+        viewModelScope.launch {
+            val prefs = dataStore.data.first()
+            val stored = prefs[NUMBER_OF_DECADES_KEY]
+            if (stored != null && savedStateHandle.get<Int>(KEY_NUMBER_OF_DECADES) == null) {
+                _numberOfDecades.value = stored.coerceIn(5, 50)
+            }
+        }
+    }
 
     // ===== Reactive Computed Properties (StateFlow) =====
 
@@ -104,7 +126,10 @@ class RosaryViewModel @Inject constructor(
             is RosaryPhase.OpeningHailMary -> hailMaryText
             is RosaryPhase.OpeningGlory -> gloryBeText
             is RosaryPhase.Decade -> when (phase.step) {
-                is DecadeStep.Meditation -> "제${phase.number}단: ${mystery.meditations[phase.number - 1]}"
+                is DecadeStep.Meditation -> {
+                    val meditationIndex = (phase.number - 1) % mystery.meditations.size
+                    "제${phase.number}단: ${mystery.meditations[meditationIndex]}"
+                }
                 is DecadeStep.OurFather -> ourFatherText
                 is DecadeStep.HailMary -> hailMaryText
                 is DecadeStep.Glory -> gloryBeText
@@ -142,7 +167,8 @@ class RosaryViewModel @Inject constructor(
 
     val currentMeditationTopic: StateFlow<String?> = combine(_currentPhase, _selectedMystery) { phase, mystery ->
         if (phase is RosaryPhase.Decade) {
-            mystery.meditations[phase.number - 1]
+            val meditationIndex = (phase.number - 1) % mystery.meditations.size
+            mystery.meditations[meditationIndex]
         } else null
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -180,8 +206,12 @@ class RosaryViewModel @Inject constructor(
     }
 
     fun setNumberOfDecades(count: Int) {
-        _numberOfDecades.value = count
-        savedStateHandle[KEY_NUMBER_OF_DECADES] = count
+        val clamped = (count.coerceIn(5, 50) / 5) * 5
+        _numberOfDecades.value = clamped
+        savedStateHandle[KEY_NUMBER_OF_DECADES] = clamped
+        viewModelScope.launch {
+            dataStore.edit { it[NUMBER_OF_DECADES_KEY] = clamped }
+        }
     }
 
     fun startPraying() {
@@ -200,11 +230,25 @@ class RosaryViewModel @Inject constructor(
         savedStateHandle[KEY_IS_PRAYING] = false
     }
 
-    fun debouncedAdvance() {
+    /**
+     * 현재 advance()가 단(decade) 전환을 유발하는지 여부를 반환한다.
+     * UI에서 햅틱 피드백 강도를 차등 적용하는 데 사용한다.
+     */
+    fun isDecadeTransition(): Boolean {
+        val phase = _currentPhase.value
+        if (phase !is RosaryPhase.Decade) return false
+        return when (phase.step) {
+            is DecadeStep.Fatima -> true  // 다음 단 또는 SalveRegina로 전환
+            else -> false
+        }
+    }
+
+    fun debouncedAdvance(): Boolean {
         val now = System.currentTimeMillis()
-        if (now - lastAdvanceTime < advanceDebounceMs) return
+        if (now - lastAdvanceTime < advanceDebounceMs) return false
         lastAdvanceTime = now
         advance()
+        return true
     }
 
     fun advance() {
@@ -246,10 +290,9 @@ class RosaryViewModel @Inject constructor(
         _elapsedSeconds.value = 0
         _currentPhase.value = RosaryPhase.MysterySelection
         _selectedMystery.value = MysteryType.recommendedForToday()
-        _numberOfDecades.value = 5
+        // numberOfDecades는 사용자 선호 값이므로 초기화하지 않음 (DataStore 영속 설정 유지)
         savedStateHandle[KEY_IS_PRAYING] = false
         savedStateHandle[KEY_ELAPSED_SECONDS] = 0
-        savedStateHandle[KEY_NUMBER_OF_DECADES] = 5
         savedStateHandle[KEY_SELECTED_MYSTERY] = MysteryType.recommendedForToday().name
     }
 
@@ -267,8 +310,34 @@ class RosaryViewModel @Inject constructor(
 
     fun saveCompletedRosary() {
         viewModelScope.launch {
-            calendarRepository.addRosaryEntry(LocalDate.now(), _selectedMystery.value.key)
+            calendarRepository.addRosaryEntry(
+                LocalDate.now(),
+                _selectedMystery.value.key,
+                _numberOfDecades.value
+            )
         }
+    }
+
+    fun requestReviewIfNeeded() {
+        viewModelScope.launch {
+            val hasRequested = dataStore.data.first()[HAS_REQUESTED_REVIEW_KEY] ?: false
+            if (hasRequested) return@launch
+
+            dataStore.edit { it[HAS_REQUESTED_REVIEW_KEY] = true }
+
+            reviewManager.requestReviewFlow()
+                .addOnSuccessListener { info ->
+                    _reviewInfo.value = info
+                }
+                .addOnFailureListener {
+                    // 조용히 무시 (네트워크 없음, Play Store 미설치 등)
+                }
+        }
+    }
+
+    fun launchReview(activity: Activity) {
+        val info = _reviewInfo.value ?: return
+        reviewManager.launchReviewFlow(activity, info)
     }
 
     override fun onCleared() {

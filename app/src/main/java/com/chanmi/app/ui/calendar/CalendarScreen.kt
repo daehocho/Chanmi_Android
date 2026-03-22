@@ -22,23 +22,33 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +61,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.chanmi.app.data.model.DailyRecordWithDetails
+import com.chanmi.app.data.model.GoodDeed
+import com.chanmi.app.data.model.RosaryEntry
 import com.chanmi.app.ui.theme.chanmiColors
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -66,16 +79,56 @@ fun CalendarScreen(
     val currentMonth by viewModel.currentMonth.collectAsStateWithLifecycle()
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
     val dailyRecords by viewModel.dailyRecords.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var showDataInfo by rememberSaveable { mutableStateOf(false) }
+
+    val onDeleteRosaryWithUndo: (RosaryEntry) -> Unit = { entry ->
+        viewModel.deleteRosaryEntry(entry)
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = "묵주기도 기록이 삭제되었습니다",
+                actionLabel = "실행 취소",
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoDeleteRosaryEntry(entry)
+            }
+        }
+    }
+
+    val onDeleteGoodDeedWithUndo: (GoodDeed) -> Unit = { deed ->
+        viewModel.deleteGoodDeed(deed)
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = "선행 기록이 삭제되었습니다",
+                actionLabel = "실행 취소",
+                duration = SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoDeleteGoodDeed(deed)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("달력") },
+                actions = {
+                    IconButton(onClick = { showDataInfo = true }) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = "데이터 안내"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         if (widthSizeClass == WindowWidthSizeClass.Expanded || widthSizeClass == WindowWidthSizeClass.Medium) {
@@ -106,6 +159,8 @@ fun CalendarScreen(
                         date = selectedDate!!,
                         record = selectedDate?.let { viewModel.recordFor(it) },
                         viewModel = viewModel,
+                        onDeleteRosary = onDeleteRosaryWithUndo,
+                        onDeleteGoodDeed = onDeleteGoodDeedWithUndo,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
@@ -147,6 +202,8 @@ fun CalendarScreen(
                         date = selectedDate!!,
                         record = selectedDate?.let { viewModel.recordFor(it) },
                         viewModel = viewModel,
+                        onDeleteRosary = onDeleteRosaryWithUndo,
+                        onDeleteGoodDeed = onDeleteGoodDeedWithUndo,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
@@ -156,6 +213,32 @@ fun CalendarScreen(
                 }
             }
         }
+    }
+
+    if (showDataInfo) {
+        AlertDialog(
+            onDismissRequest = { showDataInfo = false },
+            icon = {
+                Icon(
+                    Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            title = { Text("데이터 안내") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("• 묵주기도와 선행 기록은 이 기기에만 저장됩니다.")
+                    Text("• 앱을 삭제하면 모든 기록이 함께 삭제됩니다.")
+                    Text("• 데이터는 다른 기기로 자동 동기화되지 않습니다.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDataInfo = false }) {
+                    Text("확인")
+                }
+            }
+        )
     }
 }
 

@@ -87,6 +87,9 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
 
+    // Google Play In-App Review
+    implementation(libs.play.review.ktx)
+
     // DataStore
     implementation(libs.datastore.preferences)
 
