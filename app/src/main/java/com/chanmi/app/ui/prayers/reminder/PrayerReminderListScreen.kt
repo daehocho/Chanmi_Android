@@ -23,15 +23,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,6 +60,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.ui.unit.Dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -255,7 +261,12 @@ fun PrayerReminderListScreen(
                     )
                 } else {
                     // 대화면에서 카드가 과도하게 넓어지지 않도록 maxWidth 제한 (UX-03)
+                    val lazyListState = rememberLazyListState()
+                    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
+                        viewModel.reorder(from.index, to.index)
+                    }
                     LazyColumn(
+                        state = lazyListState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier
@@ -266,24 +277,28 @@ fun PrayerReminderListScreen(
                             items = list,
                             key = { it.id }
                         ) { reminder ->
-                            ReminderCardWithSwipe(
-                                reminder = reminder,
-                                onToggle = { viewModel.toggleEnabled(reminder) },
-                                onClick = { onNavigateToEdit(reminder.id) },
-                                onDelete = {
-                                    viewModel.deleteReminder(reminder)
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = "알림이 삭제되었습니다",
-                                            actionLabel = "실행 취소",
-                                            duration = SnackbarDuration.Long
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.undoDelete(reminder)
+                            ReorderableItem(reorderState, key = reminder.id) { isDragging ->
+                                ReminderCardWithSwipe(
+                                    reminder = reminder,
+                                    isDragging = isDragging,
+                                    dragHandleModifier = Modifier.draggableHandle(),
+                                    onToggle = { viewModel.toggleEnabled(reminder) },
+                                    onClick = { onNavigateToEdit(reminder.id) },
+                                    onDelete = {
+                                        viewModel.deleteReminder(reminder)
+                                        scope.launch {
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = "알림이 삭제되었습니다",
+                                                actionLabel = "실행 취소",
+                                                duration = SnackbarDuration.Long
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed) {
+                                                viewModel.undoDelete(reminder)
+                                            }
                                         }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -292,16 +307,22 @@ fun PrayerReminderListScreen(
     }
 }
 
-// MARK: - ReminderCard with SwipeToDismiss
+// MARK: - ReminderCard with SwipeToDismiss + Drag Handle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReminderCardWithSwipe(
     reminder: PrayerReminder,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier = Modifier,
     onToggle: () -> Unit,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val elevation: Dp by animateDpAsState(
+        targetValue = if (isDragging) 6.dp else 0.dp,
+        label = "drag_elevation"
+    )
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (value == SwipeToDismissBoxValue.EndToStart) {
@@ -340,6 +361,8 @@ private fun ReminderCardWithSwipe(
     ) {
         ReminderCard(
             reminder = reminder,
+            elevation = elevation,
+            dragHandleModifier = dragHandleModifier,
             onToggle = onToggle,
             onClick = onClick
         )
@@ -351,23 +374,36 @@ private fun ReminderCardWithSwipe(
 @Composable
 private fun ReminderCard(
     reminder: PrayerReminder,
+    elevation: Dp,
     onToggle: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    dragHandleModifier: Modifier = Modifier
 ) {
     val accessibilityDesc = "${reminder.prayerTitle}, ${reminder.formattedTime}, ${reminder.weekdayText}"
 
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
+        shadowElevation = elevation,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .semantics { contentDescription = accessibilityDesc }
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(start = 4.dp, end = 14.dp, top = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 드래그 핸들
+            Icon(
+                Icons.Default.DragHandle,
+                contentDescription = "순서 변경",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = dragHandleModifier
+                    .size(40.dp)
+                    .padding(8.dp)
+            )
+
             // 벨 아이콘
             Surface(
                 shape = CircleShape,

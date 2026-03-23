@@ -9,10 +9,8 @@ import com.chanmi.app.data.repository.PrayerRepository
 import com.chanmi.app.notification.AlarmScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,11 +22,13 @@ class PrayerReminderViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * 알림 목록 (Room Flow → StateFlow)
+     * 알림 목록
      * null = 로딩 중, emptyList = 빈 목록, non-empty = 데이터 있음
+     *
+     * MutableStateFlow로 유지하여 드래그 재정렬 시 낙관적 업데이트 지원
      */
-    val reminders: StateFlow<List<PrayerReminder>?> = repository.getAll()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    private val _reminders = MutableStateFlow<List<PrayerReminder>?>(null)
+    val reminders: StateFlow<List<PrayerReminder>?> = _reminders.asStateFlow()
 
     /** 기도문 선택에 사용할 전체 기도문 목록 */
     private val _availablePrayers = MutableStateFlow<List<Prayer>>(emptyList())
@@ -39,6 +39,9 @@ class PrayerReminderViewModel @Inject constructor(
     val canScheduleExact: StateFlow<Boolean> = _canScheduleExact.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            repository.getAll().collect { _reminders.value = it }
+        }
         loadAvailablePrayers()
         checkExactAlarmPermission()
     }
@@ -76,6 +79,22 @@ class PrayerReminderViewModel @Inject constructor(
     fun undoDelete(reminder: PrayerReminder) {
         viewModelScope.launch {
             repository.save(reminder)
+        }
+    }
+
+    /**
+     * 드래그 재정렬 - 낙관적 업데이트 후 DB 저장
+     *
+     * @param fromIndex 드래그 시작 인덱스
+     * @param toIndex 드래그 종료 인덱스
+     */
+    fun reorder(fromIndex: Int, toIndex: Int) {
+        val current = _reminders.value ?: return
+        if (fromIndex == toIndex) return
+        val reordered = current.toMutableList().apply { add(toIndex, removeAt(fromIndex)) }
+        _reminders.value = reordered
+        viewModelScope.launch {
+            repository.reorder(reordered)
         }
     }
 

@@ -90,6 +90,9 @@ dependencies {
     // Google Play In-App Review
     implementation(libs.play.review.ktx)
 
+    // Reorderable LazyColumn
+    implementation(libs.reorderable)
+
     // DataStore
     implementation(libs.datastore.preferences)
 

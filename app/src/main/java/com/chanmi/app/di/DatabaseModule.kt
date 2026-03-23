@@ -55,6 +55,13 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // v5: prayer_reminders에 sortOrder 컬럼 추가 (사용자 지정 정렬 순서)
+            db.execSQL("ALTER TABLE prayer_reminders ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): ChanmiDatabase {
@@ -63,7 +70,7 @@ object DatabaseModule {
             ChanmiDatabase::class.java,
             "chanmi_database"
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
     }
 

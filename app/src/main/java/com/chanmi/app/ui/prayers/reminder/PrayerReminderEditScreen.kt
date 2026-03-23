@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -35,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.TopAppBar
@@ -82,6 +85,7 @@ fun PrayerReminderEditScreen(
     var showPrayerSelection by rememberSaveable { mutableStateOf(false) }
     var existingReminder by remember { mutableStateOf<PrayerReminder?>(null) }
     var isInitialized by rememberSaveable { mutableStateOf(false) }
+    var isDialMode by rememberSaveable { mutableStateOf(true) }
 
     val isEditing = reminderId != null
 
@@ -227,13 +231,28 @@ fun PrayerReminderEditScreen(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    TimePicker(
-                        state = editTimePickerState,
-                        colors = TimePickerDefaults.colors(
-                            selectorColor = MaterialTheme.chanmiColors.goldAccent,
-                            clockDialSelectedContentColor = Color.White
-                        )
+                    // 다이얼/키보드 전환 버튼 (우측 정렬)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(onClick = { isDialMode = !isDialMode }) {
+                            Icon(
+                                imageVector = if (isDialMode) Icons.Outlined.Keyboard else Icons.Outlined.Schedule,
+                                contentDescription = if (isDialMode) "키보드 입력으로 전환" else "다이얼 입력으로 전환",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    val timePickerColors = TimePickerDefaults.colors(
+                        selectorColor = MaterialTheme.chanmiColors.goldAccent,
+                        clockDialSelectedContentColor = Color.White
                     )
+                    if (isDialMode) {
+                        TimePicker(state = editTimePickerState, colors = timePickerColors)
+                    } else {
+                        TimeInput(state = editTimePickerState, colors = timePickerColors)
+                    }
                 }
             }
 

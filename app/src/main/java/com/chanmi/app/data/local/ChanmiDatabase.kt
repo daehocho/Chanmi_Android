@@ -9,7 +9,7 @@ import com.chanmi.app.data.model.RosaryEntry
 
 @Database(
     entities = [DailyRecord::class, RosaryEntry::class, GoodDeed::class, PrayerReminder::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class ChanmiDatabase : RoomDatabase() {

@@ -17,6 +17,7 @@ core-ktx = "1.15.0"
 activity-compose = "1.9.3"
 window = "1.2.0"
 play-review = "2.0.2"
+reorderable = "2.4.0"
 
 [libraries]
 # Compose
@@ -53,6 +54,9 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 
 # Google Play In-App Review
 play-review-ktx = { group = "com.google.android.play", name = "review-ktx", version.ref = "play-review" }
+
+# Reorderable LazyColumn
+reorderable = { group = "sh.calvin.reorderable", name = "reorderable", version.ref = "reorderable" }
 
 # DataStore
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }

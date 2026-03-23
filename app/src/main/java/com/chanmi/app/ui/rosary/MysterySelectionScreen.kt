@@ -48,6 +48,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -58,6 +59,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -128,6 +130,13 @@ fun MysterySelectionScreen(
                 showSwipeGuide = true
             }
         }
+    }
+
+    // 기도 진행 중 화면 꺼짐 방지 (iOS UIApplication.isIdleTimerDisabled 대응)
+    val view = LocalView.current
+    DisposableEffect(isPraying) {
+        if (isPraying) view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
     }
 
     if (showCompletion) {

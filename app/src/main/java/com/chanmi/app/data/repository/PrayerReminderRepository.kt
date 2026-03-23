@@ -44,6 +44,18 @@ class PrayerReminderRepository @Inject constructor(
         }
     }
 
+    /**
+     * 드래그 후 재정렬 - sortOrder를 새 위치 기준으로 갱신
+     *
+     * @param reordered 새 순서로 정렬된 전체 목록
+     */
+    suspend fun reorder(reordered: List<PrayerReminder>) {
+        val updated = reordered.mapIndexed { index, reminder ->
+            reminder.copy(sortOrder = index)
+        }
+        dao.updateAll(updated)
+    }
+
     /** 앱 시작/재부팅 시 활성화된 모든 알림 재스케줄링 */
     suspend fun syncAllAlarms() {
         val enabled = dao.getEnabled()

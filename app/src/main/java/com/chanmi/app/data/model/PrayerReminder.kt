@@ -20,6 +20,7 @@ data class PrayerReminder(
     val minute: Int,
     val isEnabled: Boolean = true,
     val weekdays: String = "", // "1,3,5" 또는 "" (매일)
+    val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 ) {
     /** 요일 문자열 → Set<Int> 변환 */
